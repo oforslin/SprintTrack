@@ -30,6 +30,12 @@ namespace SprintTrack.ViewModels
         // Field to store the set being dragged
         private object? _draggedSet;
 
+        // Enhanced drag and drop events for animation coordination
+        public event EventHandler<DragEventArgs>? DragStarted;
+        public event EventHandler<DragEventArgs>? DragCompleted;
+        public event EventHandler<DragOverEventArgs>? DragOver;
+        public event EventHandler<DragEventArgs>? DragLeave;
+
         public TrainingSessionDetailViewModel(TrainingSession trainingSession)
         {
             _trainingSession = trainingSession;
@@ -96,6 +102,8 @@ namespace SprintTrack.ViewModels
             // Drag and Drop Commands
             DragStartingCommand = new Command<object>(OnDragStarting);
             DropCommand = new Command<object>(OnDrop);
+            DragOverCommand = new Command<DragOverEventArgs>(OnDragOverCommand);
+            DragLeaveCommand = new Command<object>(OnDragLeaveCommand);
         }
 
         public TrainingSession TrainingSession { get => _trainingSession; set { _trainingSession = value; OnPropertyChanged(); } }
@@ -182,6 +190,8 @@ namespace SprintTrack.ViewModels
         public ICommand ToggleNewWarmupRunningSetCommand { get; }
         public ICommand DragStartingCommand { get; }
         public ICommand DropCommand { get; }
+        public ICommand DragOverCommand { get; }
+        public ICommand DragLeaveCommand { get; }
 
         public event EventHandler? RequestBack;
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -194,12 +204,40 @@ namespace SprintTrack.ViewModels
         private void OnDragStarting(object? set)
         {
             _draggedSet = set;
+            
+            // Fire event for code-behind to handle animation
+            DragStarted?.Invoke(this, new DragEventArgs { DraggedItem = set });
+        }
+
+        private void OnDragOverCommand(DragOverEventArgs? args)
+        {
+            if (args != null && _draggedSet != null && args.TargetItem != _draggedSet)
+            {
+                // Fire event for code-behind to handle smooth repositioning animation
+                DragOver?.Invoke(this, args);
+            }
+        }
+
+        private void OnDragLeaveCommand(object? targetSet)
+        {
+            if (targetSet != null && _draggedSet != null && targetSet != _draggedSet)
+            {
+                // Fire event for code-behind to reset position
+                DragLeave?.Invoke(this, new DragEventArgs { DraggedItem = _draggedSet, TargetItem = targetSet });
+            }
         }
 
         private void OnDrop(object? targetSet)
         {
+            var draggedItem = _draggedSet;
+            
             if (_draggedSet == null || targetSet == null || _draggedSet == targetSet)
+            {
+                // Fire completion event even if no reordering happened
+                DragCompleted?.Invoke(this, new DragEventArgs { DraggedItem = draggedItem, TargetItem = targetSet });
+                _draggedSet = null;
                 return;
+            }
 
             var exercise = TrainingSession.Exercises.FirstOrDefault(ex =>
                 (ex.ExerciseSets.Contains(_draggedSet as ExerciseSet) && ex.ExerciseSets.Contains(targetSet as ExerciseSet)) ||
@@ -207,7 +245,13 @@ namespace SprintTrack.ViewModels
             );
 
             if (exercise == null)
+            {
+                DragCompleted?.Invoke(this, new DragEventArgs { DraggedItem = draggedItem, TargetItem = targetSet });
+                _draggedSet = null;
                 return;
+            }
+
+            bool reorderOccurred = false;
 
             if (_draggedSet is ExerciseSet draggedStrengthSet && targetSet is ExerciseSet targetStrengthSet)
             {
@@ -215,10 +259,11 @@ namespace SprintTrack.ViewModels
                 int oldIndex = collection.IndexOf(draggedStrengthSet);
                 int newIndex = collection.IndexOf(targetStrengthSet);
 
-                if (oldIndex != -1 && newIndex != -1)
+                if (oldIndex != -1 && newIndex != -1 && oldIndex != newIndex)
                 {
                     collection.Move(oldIndex, newIndex);
                     RenumberExerciseSets(exercise);
+                    reorderOccurred = true;
                 }
             }
             else if (_draggedSet is RunningSet draggedRunningSet && targetSet is RunningSet targetRunningSet)
@@ -227,12 +272,22 @@ namespace SprintTrack.ViewModels
                 int oldIndex = collection.IndexOf(draggedRunningSet);
                 int newIndex = collection.IndexOf(targetRunningSet);
 
-                if (oldIndex != -1 && newIndex != -1)
+                if (oldIndex != -1 && newIndex != -1 && oldIndex != newIndex)
                 {
                     collection.Move(oldIndex, newIndex);
                     RenumberRunningSets(exercise);
+                    reorderOccurred = true;
                 }
             }
+
+            // Fire completion event with information about whether reordering occurred
+            DragCompleted?.Invoke(this, new DragEventArgs 
+            { 
+                DraggedItem = draggedItem, 
+                TargetItem = targetSet, 
+                ReorderOccurred = reorderOccurred 
+            });
+            
             _draggedSet = null;
         }
 
@@ -934,5 +989,20 @@ namespace SprintTrack.ViewModels
         public string Name { get; }
         public ExerciseType Type { get; }
         public string Description { get; }
+    }
+
+    // Event argument classes for drag and drop animations
+    public class DragEventArgs : EventArgs
+    {
+        public object? DraggedItem { get; set; }
+        public object? TargetItem { get; set; }
+        public bool ReorderOccurred { get; set; }
+    }
+
+    public class DragOverEventArgs : EventArgs
+    {
+        public object? DraggedItem { get; set; }
+        public object? TargetItem { get; set; }
+        public bool IsComingFromAbove { get; set; }
     }
 }

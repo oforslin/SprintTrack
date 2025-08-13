@@ -82,25 +82,28 @@
                       <Button Grid.Column="3" Text="Delete" Command="{Binding Source={x:Reference Page}, Path=BindingContext.DeleteExerciseCommand}" CommandParameter="{Binding .}" BackgroundColor="#DC3545" TextColor="White" FontSize="11" CornerRadius="6" Padding="12,6" Margin="4,0" />
                     </Grid>
 
+                    <!-- Individual Sets for Strength Exercises -->
                     <StackLayout IsVisible="{Binding ExerciseType, Converter={StaticResource ExerciseTypeToVisibilityConverter}, ConverterParameter='Strength'}" Spacing="6">
                       <CollectionView ItemsSource="{Binding ExerciseSets}">
                         <CollectionView.ItemTemplate>
                           <DataTemplate>
-                            <Frame BackgroundColor="White" Margin="0,3" Padding="8" CornerRadius="8" HasShadow="False" BorderColor="#E9ECEF">
-                              <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup Name="CommonStates">
-                                  <VisualState Name="Normal" />
-                                  <VisualState Name="DragOver">
-                                    <VisualState.Setters>
-                                      <Setter Property="Margin" Value="0, 50, 0, 3" />
-                                      <Setter Property="BackgroundColor" Value="#E3F2FD" />
-                                    </VisualState.Setters>
-                                  </VisualState>
-                                </VisualStateGroup>
-                              </VisualStateManager.VisualStateGroups>
+                            <Frame x:Name="SetFrame"
+                                   BackgroundColor="White" 
+                                   Margin="0,3" 
+                                   Padding="8" 
+                                   CornerRadius="8" 
+                                   HasShadow="False" 
+                                   BorderColor="#E9ECEF"
+                                   Loaded="OnFrameLoaded">
                               <Frame.GestureRecognizers>
-                                <DragGestureRecognizer CanDrag="True" DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" DragStartingCommandParameter="{Binding .}" />
-                                <DropGestureRecognizer AllowDrop="True" DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" DropCommandParameter="{Binding .}" />
+                                <DragGestureRecognizer CanDrag="True" 
+                                                       DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
+                                                       DragStartingCommandParameter="{Binding .}" />
+                                <DropGestureRecognizer AllowDrop="True" 
+                                                       DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
+                                                       DropCommandParameter="{Binding .}"
+                                                       DragOver="OnDragOver"
+                                                       DragLeave="OnDragLeave" />
                               </Frame.GestureRecognizers>
                               <Grid ColumnSpacing="6">
                                 <Grid.ColumnDefinitions>
@@ -146,25 +149,28 @@
                       </CollectionView>
                     </StackLayout>
 
+                    <!-- Running Exercise Display -->
                     <StackLayout IsVisible="{Binding ExerciseType, Converter={StaticResource ExerciseTypeToVisibilityConverter}, ConverterParameter='Running'}" Spacing="6">
                       <CollectionView ItemsSource="{Binding RunningSets}">
                         <CollectionView.ItemTemplate>
                           <DataTemplate>
-                            <Frame BackgroundColor="White" Margin="0,3" Padding="8" CornerRadius="8" HasShadow="False" BorderColor="#E9ECEF">
-                              <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup Name="CommonStates">
-                                  <VisualState Name="Normal" />
-                                  <VisualState Name="DragOver">
-                                    <VisualState.Setters>
-                                      <Setter Property="Margin" Value="0, 50, 0, 3" />
-                                      <Setter Property="BackgroundColor" Value="#E3F2FD" />
-                                    </VisualState.Setters>
-                                  </VisualState>
-                                </VisualStateGroup>
-                              </VisualStateManager.VisualStateGroups>
+                            <Frame x:Name="RunningSetFrame"
+                                   BackgroundColor="White" 
+                                   Margin="0,3" 
+                                   Padding="8" 
+                                   CornerRadius="8" 
+                                   HasShadow="False" 
+                                   BorderColor="#E9ECEF"
+                                   Loaded="OnFrameLoaded">
                               <Frame.GestureRecognizers>
-                                <DragGestureRecognizer CanDrag="True" DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" DragStartingCommandParameter="{Binding .}" />
-                                <DropGestureRecognizer AllowDrop="True" DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" DropCommandParameter="{Binding .}" />
+                                <DragGestureRecognizer CanDrag="True" 
+                                                       DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
+                                                       DragStartingCommandParameter="{Binding .}" />
+                                <DropGestureRecognizer AllowDrop="True" 
+                                                       DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
+                                                       DropCommandParameter="{Binding .}"
+                                                       DragOver="OnDragOver"
+                                                       DragLeave="OnDragLeave" />
                               </Frame.GestureRecognizers>
                               <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
@@ -219,25 +225,28 @@
                       </CollectionView>
                     </StackLayout>
 
+                    <!-- Sprinting Exercise Display -->
                     <StackLayout IsVisible="{Binding ExerciseType, Converter={StaticResource ExerciseTypeToVisibilityConverter}, ConverterParameter='Sprinting'}" Spacing="6">
                       <CollectionView ItemsSource="{Binding RunningSets}">
                         <CollectionView.ItemTemplate>
                           <DataTemplate>
-                            <Frame BackgroundColor="White" Margin="0,3" Padding="8" CornerRadius="8" HasShadow="False" BorderColor="#E9ECEF">
-                              <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup Name="CommonStates">
-                                  <VisualState Name="Normal" />
-                                  <VisualState Name="DragOver">
-                                    <VisualState.Setters>
-                                      <Setter Property="Margin" Value="0, 50, 0, 3" />
-                                      <Setter Property="BackgroundColor" Value="#E3F2FD" />
-                                    </VisualState.Setters>
-                                  </VisualState>
-                                </VisualStateGroup>
-                              </VisualStateManager.VisualStateGroups>
+                            <Frame x:Name="SprintingSetFrame"
+                                   BackgroundColor="White" 
+                                   Margin="0,3" 
+                                   Padding="8" 
+                                   CornerRadius="8" 
+                                   HasShadow="False" 
+                                   BorderColor="#E9ECEF"
+                                   Loaded="OnFrameLoaded">
                               <Frame.GestureRecognizers>
-                                <DragGestureRecognizer CanDrag="True" DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" DragStartingCommandParameter="{Binding .}" />
-                                <DropGestureRecognizer AllowDrop="True" DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" DropCommandParameter="{Binding .}" />
+                                <DragGestureRecognizer CanDrag="True" 
+                                                       DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
+                                                       DragStartingCommandParameter="{Binding .}" />
+                                <DropGestureRecognizer AllowDrop="True" 
+                                                       DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
+                                                       DropCommandParameter="{Binding .}"
+                                                       DragOver="OnDragOver"
+                                                       DragLeave="OnDragLeave" />
                               </Frame.GestureRecognizers>
                               <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
@@ -284,25 +293,28 @@
                       </CollectionView>
                     </StackLayout>
 
+                    <!-- Sled Sprint Exercise Display -->
                     <StackLayout IsVisible="{Binding ExerciseType, Converter={StaticResource ExerciseTypeToVisibilityConverter}, ConverterParameter='SledSprint'}" Spacing="6">
                       <CollectionView ItemsSource="{Binding RunningSets}">
                         <CollectionView.ItemTemplate>
                           <DataTemplate>
-                            <Frame BackgroundColor="White" Margin="0,3" Padding="8" CornerRadius="8" HasShadow="False" BorderColor="#E9ECEF">
-                              <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup Name="CommonStates">
-                                  <VisualState Name="Normal" />
-                                  <VisualState Name="DragOver">
-                                    <VisualState.Setters>
-                                      <Setter Property="Margin" Value="0, 50, 0, 3" />
-                                      <Setter Property="BackgroundColor" Value="#E3F2FD" />
-                                    </VisualState.Setters>
-                                  </VisualState>
-                                </VisualStateGroup>
-                              </VisualStateManager.VisualStateGroups>
+                            <Frame x:Name="SledSprintSetFrame"
+                                   BackgroundColor="White" 
+                                   Margin="0,3" 
+                                   Padding="8" 
+                                   CornerRadius="8" 
+                                   HasShadow="False" 
+                                   BorderColor="#E9ECEF"
+                                   Loaded="OnFrameLoaded">
                               <Frame.GestureRecognizers>
-                                <DragGestureRecognizer CanDrag="True" DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" DragStartingCommandParameter="{Binding .}" />
-                                <DropGestureRecognizer AllowDrop="True" DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" DropCommandParameter="{Binding .}" />
+                                <DragGestureRecognizer CanDrag="True" 
+                                                       DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
+                                                       DragStartingCommandParameter="{Binding .}" />
+                                <DropGestureRecognizer AllowDrop="True" 
+                                                       DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
+                                                       DropCommandParameter="{Binding .}"
+                                                       DragOver="OnDragOver"
+                                                       DragLeave="OnDragLeave" />
                               </Frame.GestureRecognizers>
                               <Grid ColumnSpacing="6">
                                 <Grid.ColumnDefinitions>
