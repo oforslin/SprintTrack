@@ -12,7 +12,7 @@ public partial class TrainingSessionDetailPage : ContentPage
     
     // Enhanced animation state tracking for CollectionView compatibility
     private readonly ConcurrentDictionary<object, WeakReference<Frame>> _frameCache = new();
-    private readonly Dictionary<object, (double OriginalTranslationY, bool IsAnimating, double OriginalOpacity, Color OriginalBackgroundColor, double OriginalScale)> _itemStates = new();
+    private readonly Dictionary<object, (double OriginalTranslationY, bool IsAnimating, double OriginalOpacity, Color OriginalBackgroundColor, double OriginalScale, double CalculatedHeight)> _itemStates = new();
     private object? _draggedItem;
     private readonly Dictionary<object, Frame> _activeFrames = new();
     
@@ -21,7 +21,7 @@ public partial class TrainingSessionDetailPage : ContentPage
     
     private const uint AnimationDuration = 250;
     private const double LiftScale = 1.05;
-    private const double TranslateDistance = 60;
+    private const double DefaultTranslateDistance = 70; // Fallback value
 
     public TrainingSessionDetailPage(TrainingSession trainingSession)
     {
@@ -93,12 +93,13 @@ public partial class TrainingSessionDetailPage : ContentPage
         {
             try
             {
-                // Force layout update
+                // Force layout update to ensure set numbers are updated
                 await MainThread.InvokeOnMainThreadAsync(async () =>
                 {
-                    collectionView.IsVisible = false;
+                    var originalItemsSource = collectionView.ItemsSource;
+                    collectionView.ItemsSource = null;
                     await Task.Delay(1);
-                    collectionView.IsVisible = true;
+                    collectionView.ItemsSource = originalItemsSource;
                 });
             }
             catch (Exception ex)
@@ -106,6 +107,76 @@ public partial class TrainingSessionDetailPage : ContentPage
                 System.Diagnostics.Debug.WriteLine($"? Error refreshing CollectionView: {ex.Message}");
             }
         }
+    }
+
+    #endregion
+
+    #region Height Calculation Methods
+
+    private async Task<double> CalculateFrameHeightAsync(Frame frame)
+    {
+        try
+        {
+            // Ensure the frame is properly laid out
+            await Task.Delay(10);
+            
+            // Calculate total height including margins
+            var frameHeight = frame.Height;
+            var margin = frame.Margin;
+            var totalHeight = frameHeight + margin.Top + margin.Bottom;
+            
+            // If height is not available, use a reasonable default based on exercise type
+            if (totalHeight <= 0 || double.IsNaN(totalHeight) || double.IsInfinity(totalHeight))
+            {
+                totalHeight = await EstimateFrameHeightByType(frame);
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"?? Calculated frame height: {totalHeight} (Frame: {frameHeight}, Margin: {margin.Top + margin.Bottom})");
+            
+            return totalHeight;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"? Error calculating frame height: {ex.Message}");
+            return DefaultTranslateDistance;
+        }
+    }
+
+    private async Task<double> EstimateFrameHeightByType(Frame frame)
+    {
+        await Task.Delay(1);
+        
+        // Estimate based on binding context type and frame structure
+        if (frame.BindingContext is ExerciseSet) 
+        {
+            return 75; // Strength sets are typically more compact
+        }
+        
+        if (frame.BindingContext is RunningSet runningSet)
+        {
+            // Try to determine the specific running type by checking if it has certain properties set
+            if (runningSet.Weight > 0) return 95;        // Sled sprint sets (most complex with weight)
+            if (runningSet.SprintSeconds > 0) return 80; // Sprinting sets
+            return 85;                                   // Regular running sets
+        }
+        
+        // Fallback estimation based on content
+        try
+        {
+            if (frame.Content is Grid grid)
+            {
+                var columnCount = grid.ColumnDefinitions?.Count ?? 4;
+                if (columnCount >= 5) return 95; // Sled sprint (5 columns)
+                if (columnCount == 4) return 80; // Regular sets (4 columns)
+            }
+        }
+        catch
+        {
+            // Ignore any errors in content inspection
+        }
+        
+        // Final fallback
+        return DefaultTranslateDistance;
     }
 
     #endregion
@@ -125,7 +196,10 @@ public partial class TrainingSessionDetailPage : ContentPage
         {
             System.Diagnostics.Debug.WriteLine($"? Found frame for dragged item in active registry");
             
-            // Store original state with all visual properties
+            // Calculate frame height for accurate animations
+            var frameHeight = await CalculateFrameHeightAsync(frame);
+            
+            // Store original state with all visual properties including calculated height
             if (!_itemStates.ContainsKey(e.DraggedItem))
             {
                 _itemStates[e.DraggedItem] = (
@@ -133,7 +207,8 @@ public partial class TrainingSessionDetailPage : ContentPage
                     false, 
                     frame.Opacity,
                     frame.BackgroundColor,
-                    frame.Scale
+                    frame.Scale,
+                    frameHeight
                 );
             }
             
@@ -158,10 +233,13 @@ public partial class TrainingSessionDetailPage : ContentPage
             // Comprehensive cleanup of ALL visual states
             await PerformComprehensiveCleanup();
             
-            // Force CollectionView refresh to ensure UI synchronization
+            // Force CollectionView refresh to ensure UI synchronization and set number updates
             await ForceCollectionViewRefresh();
             
-            System.Diagnostics.Debug.WriteLine($"? Comprehensive cleanup completed successfully");
+            // Additional delay to ensure set numbers are properly updated
+            await Task.Delay(100);
+            
+            System.Diagnostics.Debug.WriteLine($"? Comprehensive cleanup and UI refresh completed successfully");
         }
         catch (Exception ex)
         {
@@ -182,7 +260,7 @@ public partial class TrainingSessionDetailPage : ContentPage
             try
             {
                 // Get original state or use defaults
-                var originalState = _itemStates.TryGetValue(item, out var state) ? state : (0, false, 1, Colors.White, 1);
+                var originalState = _itemStates.TryGetValue(item, out var state) ? state : (0, false, 1, Colors.White, 1, DefaultTranslateDistance);
                 
                 // Reset ALL visual properties regardless of animation state
                 frame.Opacity = originalState.OriginalOpacity;
@@ -222,6 +300,17 @@ public partial class TrainingSessionDetailPage : ContentPage
         {
             System.Diagnostics.Debug.WriteLine($"? Found target frame in active registry, animating translation");
             
+            // Calculate frame height for this specific frame if not already done
+            var frameHeight = DefaultTranslateDistance;
+            if (_itemStates.TryGetValue(e.TargetItem, out var existingState))
+            {
+                frameHeight = existingState.CalculatedHeight;
+            }
+            else
+            {
+                frameHeight = await CalculateFrameHeightAsync(targetFrame);
+            }
+            
             // Store original state if not already stored
             if (!_itemStates.ContainsKey(e.TargetItem))
             {
@@ -230,7 +319,8 @@ public partial class TrainingSessionDetailPage : ContentPage
                     false, 
                     targetFrame.Opacity,
                     targetFrame.BackgroundColor,
-                    targetFrame.Scale
+                    targetFrame.Scale,
+                    frameHeight
                 );
             }
 
@@ -243,17 +333,22 @@ public partial class TrainingSessionDetailPage : ContentPage
                     true, 
                     currentState.OriginalOpacity,
                     currentState.OriginalBackgroundColor,
-                    currentState.OriginalScale
+                    currentState.OriginalScale,
+                    currentState.CalculatedHeight
                 );
                 
-                // Determine direction and animate (VERTICAL ONLY)
+                // Determine direction and animate using calculated height (VERTICAL ONLY)
                 var translateDirection = DetermineTranslateDirection(e.DraggedItem, e.TargetItem);
-                var translateY = currentState.OriginalTranslationY + (translateDirection * TranslateDistance);
+                var translateY = currentState.OriginalTranslationY + (translateDirection * currentState.CalculatedHeight);
 
                 // Animate the translation (constrained to vertical movement)
                 await targetFrame.TranslateTo(0, translateY, AnimationDuration, Easing.CubicOut);
                 
-                System.Diagnostics.Debug.WriteLine($"? Animated target frame to Y: {translateY} (vertical only)");
+                System.Diagnostics.Debug.WriteLine($"? Animated target frame to Y: {translateY} using calculated height: {currentState.CalculatedHeight} (vertical only)");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"?? Frame for Set {GetSetNumber(e.TargetItem)} is already animating, skipping");
             }
         }
         else
@@ -282,7 +377,8 @@ public partial class TrainingSessionDetailPage : ContentPage
                 false, 
                 state.OriginalOpacity,
                 state.OriginalBackgroundColor,
-                state.OriginalScale
+                state.OriginalScale,
+                state.CalculatedHeight
             );
         }
     }
@@ -291,11 +387,18 @@ public partial class TrainingSessionDetailPage : ContentPage
 
     #region XAML Event Handlers - Frame Registration and Drag Control
 
-    private void OnFrameLoaded(object? sender, EventArgs e)
+    private async void OnFrameLoaded(object? sender, EventArgs e)
     {
         if (sender is Frame frame && frame.BindingContext != null)
         {
             RegisterFrame(frame.BindingContext, frame);
+            
+            // Pre-calculate height for smoother animations
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(100); // Let the frame fully load
+                await CalculateFrameHeightAsync(frame);
+            });
         }
     }
 
@@ -313,12 +416,35 @@ public partial class TrainingSessionDetailPage : ContentPage
             // Store comprehensive original state before any modifications
             if (!_itemStates.ContainsKey(frame.BindingContext))
             {
+                var frameHeight = DefaultTranslateDistance;
+                
+                // Try to get pre-calculated height or calculate it now
+                _ = Task.Run(async () =>
+                {
+                    frameHeight = await CalculateFrameHeightAsync(frame);
+                    
+                    // Update the stored state with the calculated height
+                    if (_itemStates.ContainsKey(frame.BindingContext))
+                    {
+                        var currentState = _itemStates[frame.BindingContext];
+                        _itemStates[frame.BindingContext] = (
+                            currentState.OriginalTranslationY,
+                            currentState.IsAnimating,
+                            currentState.OriginalOpacity,
+                            currentState.OriginalBackgroundColor,
+                            currentState.OriginalScale,
+                            frameHeight
+                        );
+                    }
+                });
+                
                 _itemStates[frame.BindingContext] = (
                     frame.TranslationY, 
                     false, 
                     frame.Opacity,
                     frame.BackgroundColor,
-                    frame.Scale
+                    frame.Scale,
+                    frameHeight
                 );
             }
             
@@ -348,7 +474,7 @@ public partial class TrainingSessionDetailPage : ContentPage
                 frame.BindingContext != null)
             {
                 var originalState = _itemStates.TryGetValue(frame.BindingContext, out var state) ? 
-                    state : (0, false, 1, Colors.White, 1);
+                    state : (0, false, 1, Colors.White, 1, DefaultTranslateDistance);
                 
                 // Restore all visual properties
                 frame.Opacity = originalState.OriginalOpacity;
@@ -363,7 +489,7 @@ public partial class TrainingSessionDetailPage : ContentPage
             if (_draggedItem != null && _activeFrames.TryGetValue(_draggedItem, out var draggedFrame))
             {
                 var originalState = _itemStates.TryGetValue(_draggedItem, out var state) ? 
-                    state : (0, false, 1, Colors.White, 1);
+                    state : (0, false, 1, Colors.White, 1, DefaultTranslateDistance);
                 
                 draggedFrame.Opacity = originalState.OriginalOpacity;
                 draggedFrame.Scale = originalState.OriginalScale;
@@ -377,7 +503,7 @@ public partial class TrainingSessionDetailPage : ContentPage
             await Task.Delay(50); // Small delay to ensure drop operations are complete
             await PerformComprehensiveCleanup();
             
-            // Force CollectionView refresh to ensure UI synchronization
+            // Force CollectionView refresh to ensure UI synchronization and set number updates
             await ForceCollectionViewRefresh();
             
             System.Diagnostics.Debug.WriteLine($"? Comprehensive restoration completed successfully");
@@ -430,21 +556,24 @@ public partial class TrainingSessionDetailPage : ContentPage
 
     #region Frame Registration System
 
-    private void RegisterFrame(object item, Frame frame)
+    private async void RegisterFrame(object item, Frame frame)
     {
         if (item != null)
         {
             _activeFrames[item] = frame;
             
-            // Store original state when registering
+            // Store original state when registering including calculated height
             if (!_itemStates.ContainsKey(item))
             {
+                var frameHeight = await CalculateFrameHeightAsync(frame);
+                
                 _itemStates[item] = (
                     frame.TranslationY, 
                     false, 
                     frame.Opacity,
                     frame.BackgroundColor,
-                    frame.Scale
+                    frame.Scale,
+                    frameHeight
                 );
             }
             
