@@ -12,9 +12,12 @@ public partial class TrainingSessionDetailPage : ContentPage
     
     // Enhanced animation state tracking for CollectionView compatibility
     private readonly ConcurrentDictionary<object, WeakReference<Frame>> _frameCache = new();
-    private readonly Dictionary<object, (double OriginalTranslationY, bool IsAnimating)> _itemStates = new();
+    private readonly Dictionary<object, (double OriginalTranslationY, bool IsAnimating, double OriginalOpacity, Color OriginalBackgroundColor, double OriginalScale)> _itemStates = new();
     private object? _draggedItem;
     private readonly Dictionary<object, Frame> _activeFrames = new();
+    
+    // Collection of all CollectionViews that need cleanup
+    private readonly List<CollectionView> _collectionViews = new();
     
     private const uint AnimationDuration = 250;
     private const double LiftScale = 1.05;
@@ -37,12 +40,75 @@ public partial class TrainingSessionDetailPage : ContentPage
         
         // Hide the Shell tab bar when this page is displayed
         Shell.SetTabBarIsVisible(this, false);
+        
+        // Find and register all CollectionViews for cleanup purposes
+        RegisterCollectionViews();
     }
 
     private async void OnRequestBack(object? sender, EventArgs e)
     {
         await Navigation.PopAsync();
     }
+
+    #region CollectionView Management
+
+    private void RegisterCollectionViews()
+    {
+        // Find all CollectionViews in the page for cleanup purposes
+        _collectionViews.Clear();
+        FindCollectionViewsRecursive(this);
+        
+        System.Diagnostics.Debug.WriteLine($"?? Registered {_collectionViews.Count} CollectionViews for cleanup");
+    }
+
+    private void FindCollectionViewsRecursive(Element element)
+    {
+        if (element is CollectionView collectionView)
+        {
+            _collectionViews.Add(collectionView);
+        }
+        
+        if (element is Layout layout)
+        {
+            foreach (var child in layout.Children.OfType<Element>())
+            {
+                FindCollectionViewsRecursive(child);
+            }
+        }
+        else if (element is ContentView contentView && contentView.Content != null)
+        {
+            FindCollectionViewsRecursive(contentView.Content);
+        }
+        else if (element is ScrollView scrollView && scrollView.Content != null)
+        {
+            FindCollectionViewsRecursive(scrollView.Content);
+        }
+    }
+
+    private async Task ForceCollectionViewRefresh()
+    {
+        System.Diagnostics.Debug.WriteLine($"?? Forcing CollectionView refresh for {_collectionViews.Count} views");
+        
+        foreach (var collectionView in _collectionViews)
+        {
+            try
+            {
+                // Force layout update
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    collectionView.IsVisible = false;
+                    await Task.Delay(1);
+                    collectionView.IsVisible = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"? Error refreshing CollectionView: {ex.Message}");
+            }
+        }
+    }
+
+    #endregion
 
     #region Drag and Drop Animation Event Handlers
 
@@ -59,10 +125,16 @@ public partial class TrainingSessionDetailPage : ContentPage
         {
             System.Diagnostics.Debug.WriteLine($"? Found frame for dragged item in active registry");
             
-            // Store original state
+            // Store original state with all visual properties
             if (!_itemStates.ContainsKey(e.DraggedItem))
             {
-                _itemStates[e.DraggedItem] = (frame.TranslationY, false);
+                _itemStates[e.DraggedItem] = (
+                    frame.TranslationY, 
+                    false, 
+                    frame.Opacity,
+                    frame.BackgroundColor,
+                    frame.Scale
+                );
             }
             
             // Animate the lift effect
@@ -79,45 +151,64 @@ public partial class TrainingSessionDetailPage : ContentPage
 
     private async void OnDragCompleted(object? sender, DragEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"?? Drag completed, resetting all animations");
+        System.Diagnostics.Debug.WriteLine($"?? Drag completed, resetting all animations and forcing UI refresh");
         
+        try
+        {
+            // Comprehensive cleanup of ALL visual states
+            await PerformComprehensiveCleanup();
+            
+            // Force CollectionView refresh to ensure UI synchronization
+            await ForceCollectionViewRefresh();
+            
+            System.Diagnostics.Debug.WriteLine($"? Comprehensive cleanup completed successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"? Error during comprehensive cleanup: {ex.Message}");
+        }
+    }
+
+    private async Task PerformComprehensiveCleanup()
+    {
         var resetTasks = new List<Task>();
 
-        // Reset all animated frames
+        // Reset ALL frames to their original state, not just animated ones
         foreach (var kvp in _activeFrames.ToList())
         {
             var item = kvp.Key;
             var frame = kvp.Value;
             
-            // Reset dragged item
-            if (item == _draggedItem)
+            try
             {
-                resetTasks.Add(frame.ScaleTo(1.0, AnimationDuration, Easing.CubicOut));
-                resetTasks.Add(AnimateBackgroundColor(frame, Colors.White, AnimationDuration));
+                // Get original state or use defaults
+                var originalState = _itemStates.TryGetValue(item, out var state) ? state : (0, false, 1, Colors.White, 1);
+                
+                // Reset ALL visual properties regardless of animation state
+                frame.Opacity = originalState.OriginalOpacity;
+                resetTasks.Add(frame.ScaleTo(originalState.OriginalScale, AnimationDuration / 2, Easing.CubicOut));
+                resetTasks.Add(frame.TranslateTo(0, originalState.OriginalTranslationY, AnimationDuration / 2, Easing.CubicOut));
+                resetTasks.Add(AnimateBackgroundColor(frame, originalState.OriginalBackgroundColor, AnimationDuration / 2));
+                
+                System.Diagnostics.Debug.WriteLine($"?? Reset frame for Set {GetSetNumber(item)} - Opacity: {originalState.OriginalOpacity}, Scale: {originalState.OriginalScale}, TranslationY: {originalState.OriginalTranslationY}");
             }
-            
-            // Reset translated items
-            if (_itemStates.TryGetValue(item, out var state) && state.IsAnimating)
+            catch (Exception ex)
             {
-                resetTasks.Add(frame.TranslateTo(0, state.OriginalTranslationY, AnimationDuration, Easing.CubicOut));
-                _itemStates[item] = (state.OriginalTranslationY, false);
+                System.Diagnostics.Debug.WriteLine($"? Error resetting frame for item {GetSetNumber(item)}: {ex.Message}");
             }
         }
 
+        // Wait for all reset animations to complete
         if (resetTasks.Any())
         {
             await Task.WhenAll(resetTasks);
         }
 
-        // Clear drag state
+        // Clear all state tracking
         _draggedItem = null;
+        _itemStates.Clear();
         
-        // Clean up completed animations from state tracking
-        var itemsToRemove = _itemStates.Where(kvp => !kvp.Value.IsAnimating).Select(kvp => kvp.Key).ToList();
-        foreach (var item in itemsToRemove)
-        {
-            _itemStates.Remove(item);
-        }
+        System.Diagnostics.Debug.WriteLine($"?? Cleared all animation states and dragged item reference");
     }
 
     private async void OnViewModelDragOver(object? sender, DragOverEventArgs e)
@@ -134,23 +225,35 @@ public partial class TrainingSessionDetailPage : ContentPage
             // Store original state if not already stored
             if (!_itemStates.ContainsKey(e.TargetItem))
             {
-                _itemStates[e.TargetItem] = (targetFrame.TranslationY, false);
+                _itemStates[e.TargetItem] = (
+                    targetFrame.TranslationY, 
+                    false, 
+                    targetFrame.Opacity,
+                    targetFrame.BackgroundColor,
+                    targetFrame.Scale
+                );
             }
 
             // Only animate if not already animating
             var currentState = _itemStates[e.TargetItem];
             if (!currentState.IsAnimating)
             {
-                _itemStates[e.TargetItem] = (currentState.OriginalTranslationY, true);
+                _itemStates[e.TargetItem] = (
+                    currentState.OriginalTranslationY, 
+                    true, 
+                    currentState.OriginalOpacity,
+                    currentState.OriginalBackgroundColor,
+                    currentState.OriginalScale
+                );
                 
-                // Determine direction and animate
+                // Determine direction and animate (VERTICAL ONLY)
                 var translateDirection = DetermineTranslateDirection(e.DraggedItem, e.TargetItem);
                 var translateY = currentState.OriginalTranslationY + (translateDirection * TranslateDistance);
 
-                // Animate the translation
+                // Animate the translation (constrained to vertical movement)
                 await targetFrame.TranslateTo(0, translateY, AnimationDuration, Easing.CubicOut);
                 
-                System.Diagnostics.Debug.WriteLine($"? Animated target frame to Y: {translateY}");
+                System.Diagnostics.Debug.WriteLine($"? Animated target frame to Y: {translateY} (vertical only)");
             }
         }
         else
@@ -174,19 +277,114 @@ public partial class TrainingSessionDetailPage : ContentPage
             
             // Animate back to original position
             await targetFrame.TranslateTo(0, state.OriginalTranslationY, AnimationDuration, Easing.CubicOut);
-            _itemStates[e.TargetItem] = (state.OriginalTranslationY, false);
+            _itemStates[e.TargetItem] = (
+                state.OriginalTranslationY, 
+                false, 
+                state.OriginalOpacity,
+                state.OriginalBackgroundColor,
+                state.OriginalScale
+            );
         }
     }
 
     #endregion
 
-    #region XAML Event Handlers - Frame Registration
+    #region XAML Event Handlers - Frame Registration and Drag Control
 
     private void OnFrameLoaded(object? sender, EventArgs e)
     {
         if (sender is Frame frame && frame.BindingContext != null)
         {
             RegisterFrame(frame.BindingContext, frame);
+        }
+    }
+
+    private void OnDragStarting_DragStarting(object? sender, DragStartingEventArgs e)
+    {
+        if (sender is DragGestureRecognizer dragRecognizer && 
+            dragRecognizer.Parent is Frame frame &&
+            frame.BindingContext != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"?? OnDragStarting_DragStarting: Hiding original frame for Set {GetSetNumber(frame.BindingContext)}");
+            
+            // Register the frame and store original state
+            RegisterFrame(frame.BindingContext, frame);
+            
+            // Store comprehensive original state before any modifications
+            if (!_itemStates.ContainsKey(frame.BindingContext))
+            {
+                _itemStates[frame.BindingContext] = (
+                    frame.TranslationY, 
+                    false, 
+                    frame.Opacity,
+                    frame.BackgroundColor,
+                    frame.Scale
+                );
+            }
+            
+            // Hide the original frame by setting opacity to 0 (prevents ghosting)
+            frame.Opacity = 0;
+            
+            // Store the frame reference for later restoration
+            _draggedItem = frame.BindingContext;
+            
+            // VERTICAL-ONLY DRAG CONSTRAINT: Set drag data to constrain movement
+            if (e.Data != null)
+            {
+                e.Data.Text = "vertical_drag_only";
+            }
+        }
+    }
+
+    private async void OnDragCompleted_DropCompleted(object? sender, DropCompletedEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine($"?? OnDragCompleted_DropCompleted: Comprehensive restoration starting");
+        
+        try
+        {
+            // Primary restoration - restore the specific dragged frame
+            if (sender is DragGestureRecognizer dragRecognizer && 
+                dragRecognizer.Parent is Frame frame &&
+                frame.BindingContext != null)
+            {
+                var originalState = _itemStates.TryGetValue(frame.BindingContext, out var state) ? 
+                    state : (0, false, 1, Colors.White, 1);
+                
+                // Restore all visual properties
+                frame.Opacity = originalState.OriginalOpacity;
+                frame.Scale = originalState.OriginalScale;
+                frame.TranslationY = originalState.OriginalTranslationY;
+                frame.BackgroundColor = originalState.OriginalBackgroundColor;
+                
+                System.Diagnostics.Debug.WriteLine($"? Primary restoration for Set {GetSetNumber(frame.BindingContext)}");
+            }
+            
+            // Secondary restoration - ensure the stored dragged item is also restored
+            if (_draggedItem != null && _activeFrames.TryGetValue(_draggedItem, out var draggedFrame))
+            {
+                var originalState = _itemStates.TryGetValue(_draggedItem, out var state) ? 
+                    state : (0, false, 1, Colors.White, 1);
+                
+                draggedFrame.Opacity = originalState.OriginalOpacity;
+                draggedFrame.Scale = originalState.OriginalScale;
+                draggedFrame.TranslationY = originalState.OriginalTranslationY;
+                draggedFrame.BackgroundColor = originalState.OriginalBackgroundColor;
+                
+                System.Diagnostics.Debug.WriteLine($"? Secondary restoration for stored dragged item Set {GetSetNumber(_draggedItem)}");
+            }
+            
+            // Tertiary restoration - clean up any other frames that might be in a bad state
+            await Task.Delay(50); // Small delay to ensure drop operations are complete
+            await PerformComprehensiveCleanup();
+            
+            // Force CollectionView refresh to ensure UI synchronization
+            await ForceCollectionViewRefresh();
+            
+            System.Diagnostics.Debug.WriteLine($"? Comprehensive restoration completed successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"? Error during drop completion: {ex.Message}");
         }
     }
 
@@ -238,10 +436,16 @@ public partial class TrainingSessionDetailPage : ContentPage
         {
             _activeFrames[item] = frame;
             
-            // Also register for drag start if this is the dragged item
-            if (item == GetCurrentDraggedItem())
+            // Store original state when registering
+            if (!_itemStates.ContainsKey(item))
             {
-                _draggedItem = item;
+                _itemStates[item] = (
+                    frame.TranslationY, 
+                    false, 
+                    frame.Opacity,
+                    frame.BackgroundColor,
+                    frame.Scale
+                );
             }
             
             System.Diagnostics.Debug.WriteLine($"?? Registered frame for Set {GetSetNumber(item)}");
@@ -253,6 +457,7 @@ public partial class TrainingSessionDetailPage : ContentPage
         if (item != null && _activeFrames.ContainsKey(item))
         {
             _activeFrames.Remove(item);
+            _itemStates.Remove(item);
             System.Diagnostics.Debug.WriteLine($"??? Unregistered frame for Set {GetSetNumber(item)}");
         }
     }
@@ -381,12 +586,21 @@ public partial class TrainingSessionDetailPage : ContentPage
     {
         base.OnAppearing();
         Shell.SetTabBarIsVisible(this, false);
+        
+        // Re-register CollectionViews when page appears
+        RegisterCollectionViews();
     }
 
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
         Shell.SetTabBarIsVisible(this, true);
+        
+        // Perform final cleanup before leaving the page
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            await PerformComprehensiveCleanup();
+        });
         
         // Clean up event handlers and caches
         if (_viewModel != null)
@@ -400,6 +614,7 @@ public partial class TrainingSessionDetailPage : ContentPage
         _frameCache.Clear();
         _itemStates.Clear();
         _activeFrames.Clear();
+        _collectionViews.Clear();
     }
 
     protected override bool OnBackButtonPressed()

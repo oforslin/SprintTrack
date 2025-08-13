@@ -98,7 +98,9 @@
                               <Frame.GestureRecognizers>
                                 <DragGestureRecognizer CanDrag="True" 
                                                        DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
-                                                       DragStartingCommandParameter="{Binding .}" />
+                                                       DragStartingCommandParameter="{Binding .}"
+                                                       DragStarting="OnDragStarting_DragStarting"
+                                                       DropCompleted="OnDragCompleted_DropCompleted" />
                                 <DropGestureRecognizer AllowDrop="True" 
                                                        DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
                                                        DropCommandParameter="{Binding .}"
@@ -165,7 +167,9 @@
                               <Frame.GestureRecognizers>
                                 <DragGestureRecognizer CanDrag="True" 
                                                        DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
-                                                       DragStartingCommandParameter="{Binding .}" />
+                                                       DragStartingCommandParameter="{Binding .}"
+                                                       DragStarting="OnDragStarting_DragStarting"
+                                                       DropCompleted="OnDragCompleted_DropCompleted" />
                                 <DropGestureRecognizer AllowDrop="True" 
                                                        DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
                                                        DropCommandParameter="{Binding .}"
@@ -241,7 +245,9 @@
                               <Frame.GestureRecognizers>
                                 <DragGestureRecognizer CanDrag="True" 
                                                        DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
-                                                       DragStartingCommandParameter="{Binding .}" />
+                                                       DragStartingCommandParameter="{Binding .}"
+                                                       DragStarting="OnDragStarting_DragStarting"
+                                                       DropCompleted="OnDragCompleted_DropCompleted" />
                                 <DropGestureRecognizer AllowDrop="True" 
                                                        DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
                                                        DropCommandParameter="{Binding .}"
@@ -309,7 +315,9 @@
                               <Frame.GestureRecognizers>
                                 <DragGestureRecognizer CanDrag="True" 
                                                        DragStartingCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DragStartingCommand}" 
-                                                       DragStartingCommandParameter="{Binding .}" />
+                                                       DragStartingCommandParameter="{Binding .}"
+                                                       DragStarting="OnDragStarting_DragStarting"
+                                                       DropCompleted="OnDragCompleted_DropCompleted" />
                                 <DropGestureRecognizer AllowDrop="True" 
                                                        DropCommand="{Binding Source={x:Reference Page}, Path=BindingContext.DropCommand}" 
                                                        DropCommandParameter="{Binding .}"
