@@ -27,14 +27,15 @@ namespace SprintTrack.ViewModels
         private int _newSprintSeconds = 0;
         private int _newSprintHundredths = 0;
 
+        // Field to store the set being dragged
+        private object? _draggedSet;
+
         public TrainingSessionDetailViewModel(TrainingSession trainingSession)
         {
             _trainingSession = trainingSession;
-            
-            // Initialize exercise types
+
             InitializeCommonExercises();
-            
-            // Commands
+
             AddExerciseCommand = new Command(AddExercise);
             SaveExerciseCommand = new Command(SaveExercise);
             CancelAddExerciseCommand = new Command(CancelAddExercise);
@@ -63,14 +64,12 @@ namespace SprintTrack.ViewModels
             DecreaseNewRepsCommand = new Command<ExerciseSet>(DecreaseNewReps);
             IncreaseNewWeightCommand = new Command<ExerciseSet>(IncreaseNewWeight);
             DecreaseNewWeightCommand = new Command<ExerciseSet>(DecreaseNewWeight);
-            
-            // Running set commands
+
             AddNewRunningSetCommand = new Command(AddNewRunningSet);
             RemoveNewRunningSetCommand = new Command<RunningSet>(RemoveNewRunningSet);
             AddRunningSetCommand = new Command<Exercise>(AddRunningSet);
             RemoveRunningSetCommand = new Command<RunningSet>(RemoveRunningSet);
-            
-            // Sprint and distance commands for existing sets
+
             IncreaseSprintSecondsCommand = new Command<RunningSet>(IncreaseSprintSeconds);
             DecreaseSprintSecondsCommand = new Command<RunningSet>(DecreaseSprintSeconds);
             IncreaseSprintHundredthsCommand = new Command<RunningSet>(IncreaseSprintHundredths);
@@ -79,8 +78,7 @@ namespace SprintTrack.ViewModels
             DecreaseRunningDistanceCommand = new Command<RunningSet>(DecreaseRunningDistance);
             IncreaseRunningWeightCommand = new Command<RunningSet>(IncreaseRunningWeight);
             DecreaseRunningWeightCommand = new Command<RunningSet>(DecreaseRunningWeight);
-            
-            // Sprint and distance commands for new sets
+
             IncreaseNewSprintSecondsCommand = new Command<RunningSet>(IncreaseNewSprintSeconds);
             DecreaseNewSprintSecondsCommand = new Command<RunningSet>(DecreaseNewSprintSeconds);
             IncreaseNewSprintHundredthsCommand = new Command<RunningSet>(IncreaseNewSprintHundredths);
@@ -89,236 +87,47 @@ namespace SprintTrack.ViewModels
             DecreaseNewRunningDistanceCommand = new Command<RunningSet>(DecreaseNewRunningDistance);
             IncreaseNewRunningWeightCommand = new Command<RunningSet>(IncreaseNewRunningWeight);
             DecreaseNewRunningWeightCommand = new Command<RunningSet>(DecreaseNewRunningWeight);
-            
-            // Toggle warmup set commands
+
             ToggleWarmupSetCommand = new Command<ExerciseSet>(ToggleWarmupSet);
             ToggleWarmupRunningSetCommand = new Command<RunningSet>(ToggleWarmupRunningSet);
             ToggleNewWarmupSetCommand = new Command<ExerciseSet>(ToggleNewWarmupSet);
             ToggleNewWarmupRunningSetCommand = new Command<RunningSet>(ToggleNewWarmupRunningSet);
+
+            // Drag and Drop Commands
+            DragStartingCommand = new Command<object>(OnDragStarting);
+            DropCommand = new Command<object>(OnDrop);
         }
 
-        public TrainingSession TrainingSession
-        {
-            get => _trainingSession;
-            set
-            {
-                _trainingSession = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public Exercise? SelectedExercise
-        {
-            get => _selectedExercise;
-            set
-            {
-                _selectedExercise = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public bool IsAddingExercise
-        {
-            get => _isAddingExercise;
-            set
-            {
-                _isAddingExercise = value;
-                OnPropertyChanged();
-            }
-        }
-
-        // New exercise properties
-        public string NewExerciseName
-        {
-            get => _newExerciseName;
-            set
-            {
-                _newExerciseName = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string NewExerciseDescription
-        {
-            get => _newExerciseDescription;
-            set
-            {
-                _newExerciseDescription = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public int NewExerciseSets
-        {
-            get => _newExerciseSets;
-            set
-            {
-                _newExerciseSets = Math.Max(1, value);
-                OnPropertyChanged();
-            }
-        }
-
-        public int NewExerciseReps
-        {
-            get => _newExerciseReps;
-            set
-            {
-                _newExerciseReps = Math.Max(1, value);
-                OnPropertyChanged();
-            }
-        }
-
-        public double NewExerciseWeight
-        {
-            get => _newExerciseWeight;
-            set
-            {
-                _newExerciseWeight = Math.Max(0, value);
-                OnPropertyChanged();
-            }
-        }
-
-        public TimeSpan NewExerciseDuration
-        {
-            get => _newExerciseDuration;
-            set
-            {
-                _newExerciseDuration = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public double NewExerciseDistance
-        {
-            get => _newExerciseDistance;
-            set
-            {
-                _newExerciseDistance = Math.Max(0, value);
-                OnPropertyChanged();
-            }
-        }
-
-        public string NewExerciseUnit
-        {
-            get => _newExerciseUnit;
-            set
-            {
-                _newExerciseUnit = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public ExerciseType NewExerciseType
-        {
-            get => _newExerciseType;
-            set
-            {
-                _newExerciseType = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsStrengthExercise));
-                OnPropertyChanged(nameof(IsCardioExercise));
-                OnPropertyChanged(nameof(IsTimeExercise));
-                OnPropertyChanged(nameof(IsRunningExercise));
-                OnPropertyChanged(nameof(IsSprintingExercise));
-                OnPropertyChanged(nameof(IsSledSprintExercise));
-            }
-        }
-
-        public string ExerciseSearchText
-        {
-            get => _exerciseSearchText;
-            set
-            {
-                _exerciseSearchText = value;
-                OnPropertyChanged();
-                FilterCommonExercises();
-                
-                // Show dropdown when user types
-                ShowExerciseDropdown = true;
-                OnPropertyChanged(nameof(CanAddNewExercise));
-                
-                // Set as selected exercise name
-                NewExerciseName = value;
-            }
-        }
-
-        public bool ShowExerciseDropdown
-        {
-            get => _showExerciseDropdown;
-            set
-            {
-                _showExerciseDropdown = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public bool CanAddNewExercise
-        {
-            get
-            {
-                return !string.IsNullOrWhiteSpace(ExerciseSearchText) && 
-                       !_allCommonExercises.Any(e => e.Name.Equals(ExerciseSearchText, StringComparison.OrdinalIgnoreCase));
-            }
-        }
-
+        public TrainingSession TrainingSession { get => _trainingSession; set { _trainingSession = value; OnPropertyChanged(); } }
+        public Exercise? SelectedExercise { get => _selectedExercise; set { _selectedExercise = value; OnPropertyChanged(); } }
+        public bool IsAddingExercise { get => _isAddingExercise; set { _isAddingExercise = value; OnPropertyChanged(); } }
+        public string NewExerciseName { get => _newExerciseName; set { _newExerciseName = value; OnPropertyChanged(); } }
+        public string NewExerciseDescription { get => _newExerciseDescription; set { _newExerciseDescription = value; OnPropertyChanged(); } }
+        public int NewExerciseSets { get => _newExerciseSets; set { _newExerciseSets = Math.Max(1, value); OnPropertyChanged(); } }
+        public int NewExerciseReps { get => _newExerciseReps; set { _newExerciseReps = Math.Max(1, value); OnPropertyChanged(); } }
+        public double NewExerciseWeight { get => _newExerciseWeight; set { _newExerciseWeight = Math.Max(0, value); OnPropertyChanged(); } }
+        public TimeSpan NewExerciseDuration { get => _newExerciseDuration; set { _newExerciseDuration = value; OnPropertyChanged(); } }
+        public double NewExerciseDistance { get => _newExerciseDistance; set { _newExerciseDistance = Math.Max(0, value); OnPropertyChanged(); } }
+        public string NewExerciseUnit { get => _newExerciseUnit; set { _newExerciseUnit = value; OnPropertyChanged(); } }
+        public ExerciseType NewExerciseType { get => _newExerciseType; set { _newExerciseType = value; OnPropertyChanged(nameof(IsStrengthExercise)); OnPropertyChanged(nameof(IsCardioExercise)); OnPropertyChanged(nameof(IsTimeExercise)); OnPropertyChanged(nameof(IsRunningExercise)); OnPropertyChanged(nameof(IsSprintingExercise)); OnPropertyChanged(nameof(IsSledSprintExercise)); } }
+        public string ExerciseSearchText { get => _exerciseSearchText; set { _exerciseSearchText = value; OnPropertyChanged(); FilterCommonExercises(); ShowExerciseDropdown = true; OnPropertyChanged(nameof(CanAddNewExercise)); NewExerciseName = value; } }
+        public bool ShowExerciseDropdown { get => _showExerciseDropdown; set { _showExerciseDropdown = value; OnPropertyChanged(); } }
+        public bool CanAddNewExercise => !string.IsNullOrWhiteSpace(ExerciseSearchText) && !_allCommonExercises.Any(e => e.Name.Equals(ExerciseSearchText, StringComparison.OrdinalIgnoreCase));
         public bool IsStrengthExercise => NewExerciseType == ExerciseType.Strength;
         public bool IsCardioExercise => NewExerciseType == ExerciseType.Cardio;
         public bool IsTimeExercise => NewExerciseType == ExerciseType.Time;
         public bool IsRunningExercise => NewExerciseType == ExerciseType.Running;
         public bool IsSprintingExercise => NewExerciseType == ExerciseType.Sprinting;
         public bool IsSledSprintExercise => NewExerciseType == ExerciseType.SledSprint;
-
-        public ObservableCollection<ExerciseSet> NewExerciseSetsList
-        {
-            get => _newExerciseSetsList;
-            set
-            {
-                _newExerciseSetsList = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public ObservableCollection<RunningSet> NewRunningSetsList
-        {
-            get => _newRunningSetsList;
-            set
-            {
-                _newRunningSetsList = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public int NewSprintSeconds
-        {
-            get => _newSprintSeconds;
-            set
-            {
-                _newSprintSeconds = Math.Max(0, Math.Min(59, value));
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(NewSprintTimeDisplay));
-            }
-        }
-
-        public int NewSprintHundredths
-        {
-            get => _newSprintHundredths;
-            set
-            {
-                _newSprintHundredths = Math.Max(0, Math.Min(99, value));
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(NewSprintTimeDisplay));
-            }
-        }
-
+        public ObservableCollection<ExerciseSet> NewExerciseSetsList { get => _newExerciseSetsList; set { _newExerciseSetsList = value; OnPropertyChanged(); } }
+        public ObservableCollection<RunningSet> NewRunningSetsList { get => _newRunningSetsList; set { _newRunningSetsList = value; OnPropertyChanged(); } }
+        public int NewSprintSeconds { get => _newSprintSeconds; set { _newSprintSeconds = Math.Max(0, Math.Min(59, value)); OnPropertyChanged(); OnPropertyChanged(nameof(NewSprintTimeDisplay)); } }
+        public int NewSprintHundredths { get => _newSprintHundredths; set { _newSprintHundredths = Math.Max(0, Math.Min(99, value)); OnPropertyChanged(); OnPropertyChanged(nameof(NewSprintTimeDisplay)); } }
         public string NewSprintTimeDisplay => $"{NewSprintSeconds:D2}.{NewSprintHundredths:D2}s";
-
-        // Common exercises collection
-        private readonly ObservableCollection<CommonExercise> _allCommonExercises = new ObservableCollection<CommonExercise>();
-        public ObservableCollection<CommonExercise> CommonExercises { get; } = new ObservableCollection<CommonExercise>();
-
+        private readonly ObservableCollection<CommonExercise> _allCommonExercises = new();
+        public ObservableCollection<CommonExercise> CommonExercises { get; } = new();
         public int FilteredExercisesCount => CommonExercises.Count;
 
-        // Commands
         public ICommand AddExerciseCommand { get; }
         public ICommand SaveExerciseCommand { get; }
         public ICommand CancelAddExerciseCommand { get; }
@@ -347,14 +156,10 @@ namespace SprintTrack.ViewModels
         public ICommand DecreaseNewRepsCommand { get; }
         public ICommand IncreaseNewWeightCommand { get; }
         public ICommand DecreaseNewWeightCommand { get; }
-        
-        // Running set commands
         public ICommand AddNewRunningSetCommand { get; }
         public ICommand RemoveNewRunningSetCommand { get; }
         public ICommand AddRunningSetCommand { get; }
         public ICommand RemoveRunningSetCommand { get; }
-        
-        // Sprint and distance commands for existing sets
         public ICommand IncreaseSprintSecondsCommand { get; }
         public ICommand DecreaseSprintSecondsCommand { get; }
         public ICommand IncreaseSprintHundredthsCommand { get; }
@@ -363,8 +168,6 @@ namespace SprintTrack.ViewModels
         public ICommand DecreaseRunningDistanceCommand { get; }
         public ICommand IncreaseRunningWeightCommand { get; }
         public ICommand DecreaseRunningWeightCommand { get; }
-        
-        // Sprint and distance commands for new sets
         public ICommand IncreaseNewSprintSecondsCommand { get; }
         public ICommand DecreaseNewSprintSecondsCommand { get; }
         public ICommand IncreaseNewSprintHundredthsCommand { get; }
@@ -373,15 +176,65 @@ namespace SprintTrack.ViewModels
         public ICommand DecreaseNewRunningDistanceCommand { get; }
         public ICommand IncreaseNewRunningWeightCommand { get; }
         public ICommand DecreaseNewRunningWeightCommand { get; }
-
-        // Toggle warmup set commands
         public ICommand ToggleWarmupSetCommand { get; }
         public ICommand ToggleWarmupRunningSetCommand { get; }
         public ICommand ToggleNewWarmupSetCommand { get; }
         public ICommand ToggleNewWarmupRunningSetCommand { get; }
+        public ICommand DragStartingCommand { get; }
+        public ICommand DropCommand { get; }
 
-        // Navigation events
         public event EventHandler? RequestBack;
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void OnDragStarting(object? set)
+        {
+            _draggedSet = set;
+        }
+
+        private void OnDrop(object? targetSet)
+        {
+            if (_draggedSet == null || targetSet == null || _draggedSet == targetSet)
+                return;
+
+            var exercise = TrainingSession.Exercises.FirstOrDefault(ex =>
+                (ex.ExerciseSets.Contains(_draggedSet as ExerciseSet) && ex.ExerciseSets.Contains(targetSet as ExerciseSet)) ||
+                (ex.RunningSets.Contains(_draggedSet as RunningSet) && ex.RunningSets.Contains(targetSet as RunningSet))
+            );
+
+            if (exercise == null)
+                return;
+
+            if (_draggedSet is ExerciseSet draggedStrengthSet && targetSet is ExerciseSet targetStrengthSet)
+            {
+                var collection = exercise.ExerciseSets;
+                int oldIndex = collection.IndexOf(draggedStrengthSet);
+                int newIndex = collection.IndexOf(targetStrengthSet);
+
+                if (oldIndex != -1 && newIndex != -1)
+                {
+                    collection.Move(oldIndex, newIndex);
+                    RenumberExerciseSets(exercise);
+                }
+            }
+            else if (_draggedSet is RunningSet draggedRunningSet && targetSet is RunningSet targetRunningSet)
+            {
+                var collection = exercise.RunningSets;
+                int oldIndex = collection.IndexOf(draggedRunningSet);
+                int newIndex = collection.IndexOf(targetRunningSet);
+
+                if (oldIndex != -1 && newIndex != -1)
+                {
+                    collection.Move(oldIndex, newIndex);
+                    RenumberRunningSets(exercise);
+                }
+            }
+            _draggedSet = null;
+        }
 
         private void AddExercise()
         {
@@ -397,8 +250,8 @@ namespace SprintTrack.ViewModels
                 {
                     Name = NewExerciseName,
                     Description = NewExerciseDescription,
-                    Sets = NewExerciseType == ExerciseType.Strength ? NewExerciseSetsList.Count : 
-                           (NewExerciseType == ExerciseType.Running || NewExerciseType == ExerciseType.Sprinting || NewExerciseType == ExerciseType.SledSprint) ? NewRunningSetsList.Count : 
+                    Sets = NewExerciseType == ExerciseType.Strength ? NewExerciseSetsList.Count :
+                           (NewExerciseType == ExerciseType.Running || NewExerciseType == ExerciseType.Sprinting || NewExerciseType == ExerciseType.SledSprint) ? NewRunningSetsList.Count :
                            NewExerciseSets,
                     Reps = NewExerciseReps,
                     Weight = NewExerciseWeight,
@@ -410,7 +263,6 @@ namespace SprintTrack.ViewModels
                     SprintHundredths = NewSprintHundredths
                 };
 
-                // Add individual sets for strength exercises
                 if (NewExerciseType == ExerciseType.Strength)
                 {
                     foreach (var set in NewExerciseSetsList)
@@ -425,7 +277,6 @@ namespace SprintTrack.ViewModels
                         });
                     }
                 }
-                // Add running sets for running exercises
                 else if (NewExerciseType == ExerciseType.Running || NewExerciseType == ExerciseType.Sprinting || NewExerciseType == ExerciseType.SledSprint)
                 {
                     foreach (var set in NewRunningSetsList)
@@ -465,10 +316,9 @@ namespace SprintTrack.ViewModels
         {
             if (exercise != null)
             {
-                // Populera formuläret med befintliga värden för redigering
                 NewExerciseName = exercise.Name;
                 NewExerciseDescription = exercise.Description;
-                NewExerciseSets = exercise.Sets; // This is the int property
+                NewExerciseSets = exercise.Sets;
                 NewExerciseReps = exercise.Reps;
                 NewExerciseWeight = exercise.Weight;
                 NewExerciseDuration = exercise.Duration;
@@ -476,7 +326,6 @@ namespace SprintTrack.ViewModels
                 NewExerciseUnit = exercise.Unit;
                 NewExerciseType = exercise.ExerciseType;
 
-                // Ta bort den gamla övningen
                 TrainingSession.Exercises.Remove(exercise);
                 IsAddingExercise = true;
             }
@@ -509,7 +358,7 @@ namespace SprintTrack.ViewModels
         private void InitializeNewExerciseSets()
         {
             _newExerciseSetsList.Clear();
-            for (int i = 1; i <= 3; i++) // Start with 3 sets by default
+            for (int i = 1; i <= 3; i++)
             {
                 _newExerciseSetsList.Add(new ExerciseSet
                 {
@@ -524,7 +373,7 @@ namespace SprintTrack.ViewModels
         private void InitializeNewRunningSets()
         {
             _newRunningSetsList.Clear();
-            for (int i = 1; i <= 1; i++) // Start with 1 set by default for running
+            for (int i = 1; i <= 1; i++)
             {
                 _newRunningSetsList.Add(new RunningSet
                 {
@@ -538,7 +387,7 @@ namespace SprintTrack.ViewModels
         private void InitializeNewSprintSets()
         {
             _newRunningSetsList.Clear();
-            for (int i = 1; i <= 3; i++) // Start with 3 sets for sprints
+            for (int i = 1; i <= 3; i++)
             {
                 _newRunningSetsList.Add(new RunningSet
                 {
@@ -553,7 +402,7 @@ namespace SprintTrack.ViewModels
         private void InitializeNewSledSprintSets()
         {
             _newRunningSetsList.Clear();
-            for (int i = 1; i <= 3; i++) // Start with 3 sets for sled sprints
+            for (int i = 1; i <= 3; i++)
             {
                 _newRunningSetsList.Add(new RunningSet
                 {
@@ -583,8 +432,6 @@ namespace SprintTrack.ViewModels
             if (exerciseSet != null && _newExerciseSetsList.Count > 1)
             {
                 _newExerciseSetsList.Remove(exerciseSet);
-                
-                // Renumber the remaining sets
                 for (int i = 0; i < _newExerciseSetsList.Count; i++)
                 {
                     _newExerciseSetsList[i].SetNumber = i + 1;
@@ -594,37 +441,24 @@ namespace SprintTrack.ViewModels
 
         private void IncreaseNewReps(ExerciseSet? exerciseSet)
         {
-            if (exerciseSet != null)
-            {
-                exerciseSet.Reps++;
-            }
+            if (exerciseSet != null) exerciseSet.Reps++;
         }
 
         private void DecreaseNewReps(ExerciseSet? exerciseSet)
         {
-            if (exerciseSet != null && exerciseSet.Reps > 1)
-            {
-                exerciseSet.Reps--;
-            }
+            if (exerciseSet != null && exerciseSet.Reps > 1) exerciseSet.Reps--;
         }
 
         private void IncreaseNewWeight(ExerciseSet? exerciseSet)
         {
-            if (exerciseSet != null)
-            {
-                exerciseSet.Weight += 1.25;
-            }
+            if (exerciseSet != null) exerciseSet.Weight += 1.25;
         }
 
         private void DecreaseNewWeight(ExerciseSet? exerciseSet)
         {
-            if (exerciseSet != null && exerciseSet.Weight > 0)
-            {
-                exerciseSet.Weight = Math.Max(0, exerciseSet.Weight - 1.25);
-            }
+            if (exerciseSet != null && exerciseSet.Weight > 0) exerciseSet.Weight = Math.Max(0, exerciseSet.Weight - 1.25);
         }
 
-        // Running set methods
         private void AddNewRunningSet()
         {
             var newSet = new RunningSet
@@ -644,8 +478,6 @@ namespace SprintTrack.ViewModels
             if (runningSet != null && _newRunningSetsList.Count > 1)
             {
                 _newRunningSetsList.Remove(runningSet);
-                
-                // Renumber the remaining sets
                 for (int i = 0; i < _newRunningSetsList.Count; i++)
                 {
                     _newRunningSetsList[i].SetNumber = i + 1;
@@ -655,18 +487,12 @@ namespace SprintTrack.ViewModels
 
         private void IncreaseNewSprintSeconds(RunningSet? runningSet)
         {
-            if (runningSet != null && runningSet.SprintSeconds < 59)
-            {
-                runningSet.SprintSeconds++;
-            }
+            if (runningSet != null && runningSet.SprintSeconds < 59) runningSet.SprintSeconds++;
         }
 
         private void DecreaseNewSprintSeconds(RunningSet? runningSet)
         {
-            if (runningSet != null && runningSet.SprintSeconds > 0)
-            {
-                runningSet.SprintSeconds--;
-            }
+            if (runningSet != null && runningSet.SprintSeconds > 0) runningSet.SprintSeconds--;
         }
 
         private void IncreaseNewSprintHundredths(RunningSet? runningSet)
@@ -674,15 +500,8 @@ namespace SprintTrack.ViewModels
             if (runningSet != null)
             {
                 runningSet.SprintHundredths = (runningSet.SprintHundredths + 1) % 100;
-                if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds < 59)
-                {
-                    runningSet.SprintSeconds++;
-                }
-                else if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds >= 59)
-                {
-                    // Don't increment seconds if already at 59, reset hundredths to 99
-                    runningSet.SprintHundredths = 99;
-                }
+                if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds < 59) runningSet.SprintSeconds++;
+                else if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds >= 59) runningSet.SprintHundredths = 99;
             }
         }
 
@@ -690,24 +509,14 @@ namespace SprintTrack.ViewModels
         {
             if (runningSet != null)
             {
-                if (runningSet.SprintHundredths > 0)
-                {
-                    runningSet.SprintHundredths--;
-                }
-                else if (runningSet.SprintSeconds > 0)
-                {
-                    runningSet.SprintSeconds--;
-                    runningSet.SprintHundredths = 99;
-                }
+                if (runningSet.SprintHundredths > 0) runningSet.SprintHundredths--;
+                else if (runningSet.SprintSeconds > 0) { runningSet.SprintSeconds--; runningSet.SprintHundredths = 99; }
             }
         }
 
         private void IncreaseNewRunningDistance(RunningSet? runningSet)
         {
-            if (runningSet != null)
-            {
-                runningSet.Distance += NewExerciseType == ExerciseType.SledSprint ? 5 : 100; // 5m for sled, 100m for sprints
-            }
+            if (runningSet != null) runningSet.Distance += NewExerciseType == ExerciseType.SledSprint ? 5 : 100;
         }
 
         private void DecreaseNewRunningDistance(RunningSet? runningSet)
@@ -721,21 +530,14 @@ namespace SprintTrack.ViewModels
 
         private void IncreaseNewRunningWeight(RunningSet? runningSet)
         {
-            if (runningSet != null)
-            {
-                runningSet.Weight += 1.25;
-            }
+            if (runningSet != null) runningSet.Weight += 1.25;
         }
 
         private void DecreaseNewRunningWeight(RunningSet? runningSet)
         {
-            if (runningSet != null && runningSet.Weight > 0)
-            {
-                runningSet.Weight = Math.Max(0, runningSet.Weight - 1.25);
-            }
+            if (runningSet != null && runningSet.Weight > 0) runningSet.Weight = Math.Max(0, runningSet.Weight - 1.25);
         }
 
-        // Methods for existing running sets
         private void AddRunningSet(Exercise? exercise)
         {
             if (exercise != null)
@@ -757,35 +559,23 @@ namespace SprintTrack.ViewModels
         {
             if (runningSet != null)
             {
-                // Find the exercise containing this set
                 var exercise = TrainingSession.Exercises.FirstOrDefault(e => e.RunningSets.Contains(runningSet));
                 if (exercise != null && exercise.RunningSets.Count > 1)
                 {
                     exercise.RunningSets.Remove(runningSet);
-                    
-                    // Renumber the remaining sets
-                    for (int i = 0; i < exercise.RunningSets.Count; i++)
-                    {
-                        exercise.RunningSets[i].SetNumber = i + 1;
-                    }
+                    for (int i = 0; i < exercise.RunningSets.Count; i++) { exercise.RunningSets[i].SetNumber = i + 1; }
                 }
             }
         }
 
         private void IncreaseSprintSeconds(RunningSet? runningSet)
         {
-            if (runningSet != null && runningSet.SprintSeconds < 59)
-            {
-                runningSet.SprintSeconds++;
-            }
+            if (runningSet != null && runningSet.SprintSeconds < 59) runningSet.SprintSeconds++;
         }
 
         private void DecreaseSprintSeconds(RunningSet? runningSet)
         {
-            if (runningSet != null && runningSet.SprintSeconds > 0)
-            {
-                runningSet.SprintSeconds--;
-            }
+            if (runningSet != null && runningSet.SprintSeconds > 0) runningSet.SprintSeconds--;
         }
 
         private void IncreaseSprintHundredths(RunningSet? runningSet)
@@ -793,15 +583,8 @@ namespace SprintTrack.ViewModels
             if (runningSet != null)
             {
                 runningSet.SprintHundredths = (runningSet.SprintHundredths + 1) % 100;
-                if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds < 59)
-                {
-                    runningSet.SprintSeconds++;
-                }
-                else if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds >= 59)
-                {
-                    // Don't increment seconds if already at 59, reset hundredths to 99
-                    runningSet.SprintHundredths = 99;
-                }
+                if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds < 59) runningSet.SprintSeconds++;
+                else if (runningSet.SprintHundredths == 0 && runningSet.SprintSeconds >= 59) runningSet.SprintHundredths = 99;
             }
         }
 
@@ -809,15 +592,8 @@ namespace SprintTrack.ViewModels
         {
             if (runningSet != null)
             {
-                if (runningSet.SprintHundredths > 0)
-                {
-                    runningSet.SprintHundredths--;
-                }
-                else if (runningSet.SprintSeconds > 0)
-                {
-                    runningSet.SprintSeconds--;
-                    runningSet.SprintHundredths = 99;
-                }
+                if (runningSet.SprintHundredths > 0) runningSet.SprintHundredths--;
+                else if (runningSet.SprintSeconds > 0) { runningSet.SprintSeconds--; runningSet.SprintHundredths = 99; }
             }
         }
 
@@ -825,7 +601,6 @@ namespace SprintTrack.ViewModels
         {
             if (runningSet != null)
             {
-                // Find the exercise to determine increment
                 var exercise = TrainingSession.Exercises.FirstOrDefault(e => e.RunningSets.Contains(runningSet));
                 var increment = exercise?.ExerciseType == ExerciseType.SledSprint ? 5 : 100;
                 runningSet.Distance += increment;
@@ -844,60 +619,36 @@ namespace SprintTrack.ViewModels
 
         private void IncreaseRunningWeight(RunningSet? runningSet)
         {
-            if (runningSet != null)
-            {
-                runningSet.Weight += 1.25;
-            }
+            if (runningSet != null) runningSet.Weight += 1.25;
         }
 
         private void DecreaseRunningWeight(RunningSet? runningSet)
         {
-            if (runningSet != null && runningSet.Weight > 0)
-            {
-                runningSet.Weight = Math.Max(0, runningSet.Weight - 1.25);
-            }
+            if (runningSet != null && runningSet.Weight > 0) runningSet.Weight = Math.Max(0, runningSet.Weight - 1.25);
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        private void InitializeCommonExercises()
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        // Now properly implement the methods
-        private void InitializeCommonExercises() 
-        {
-            // Strength exercises
             _allCommonExercises.Add(new CommonExercise("Bench Press", ExerciseType.Strength, "Chest exercise with barbell or dumbbells"));
             _allCommonExercises.Add(new CommonExercise("Squat", ExerciseType.Strength, "Leg exercise with barbell"));
             _allCommonExercises.Add(new CommonExercise("Deadlift", ExerciseType.Strength, "Full body exercise with barbell"));
-            
-            // Running exercises
             _allCommonExercises.Add(new CommonExercise("Running", ExerciseType.Running, "Distance running with time tracking (hours:minutes:seconds)"));
             _allCommonExercises.Add(new CommonExercise("Jogging", ExerciseType.Running, "Light running with time tracking"));
-            
-            // Sprint exercises
             _allCommonExercises.Add(new CommonExercise("Sprint", ExerciseType.Sprinting, "High-intensity sprinting with seconds and hundredths"));
             _allCommonExercises.Add(new CommonExercise("100m Sprint", ExerciseType.Sprinting, "100 meter sprint timing"));
-            
-            // Sled sprint exercises
             _allCommonExercises.Add(new CommonExercise("Sled Sprint", ExerciseType.SledSprint, "Weighted sled sprint with time, distance and weight"));
             _allCommonExercises.Add(new CommonExercise("Prowler Push", ExerciseType.SledSprint, "Prowler sled push exercise"));
-            
-            // Cardio exercises
             _allCommonExercises.Add(new CommonExercise("Cycling", ExerciseType.Cardio, "Bike riding exercise"));
             _allCommonExercises.Add(new CommonExercise("Swimming", ExerciseType.Cardio, "Full body cardio in water"));
-            
             FilterCommonExercises();
         }
-        
+
         private void FilterCommonExercises()
         {
             CommonExercises.Clear();
             var filtered = string.IsNullOrWhiteSpace(ExerciseSearchText)
                 ? _allCommonExercises
-                : _allCommonExercises.Where(e => 
+                : _allCommonExercises.Where(e =>
                     e.Name.ToLowerInvariant().Contains(ExerciseSearchText.ToLowerInvariant()) ||
                     e.Description.ToLowerInvariant().Contains(ExerciseSearchText.ToLowerInvariant()));
 
@@ -905,11 +656,10 @@ namespace SprintTrack.ViewModels
             {
                 CommonExercises.Add(exercise);
             }
-            
             OnPropertyChanged(nameof(FilteredExercisesCount));
             OnPropertyChanged(nameof(CanAddNewExercise));
         }
-        
+
         private void SelectExercise(string? selectedExerciseName)
         {
             if (!string.IsNullOrEmpty(selectedExerciseName))
@@ -920,41 +670,29 @@ namespace SprintTrack.ViewModels
                     NewExerciseName = selectedExercise.Name;
                     NewExerciseType = selectedExercise.Type;
                     ExerciseSearchText = selectedExercise.Name;
-                    
-                    // Set appropriate default values based on exercise type
+
                     switch (selectedExercise.Type)
                     {
                         case ExerciseType.Strength:
-                            NewExerciseSets = 3;
-                            NewExerciseReps = 10;
-                            NewExerciseWeight = 0;
-                            NewExerciseUnit = "kg";
+                            NewExerciseSets = 3; NewExerciseReps = 10; NewExerciseWeight = 0; NewExerciseUnit = "kg";
                             InitializeNewExerciseSets();
                             break;
                         case ExerciseType.Cardio:
-                            NewExerciseDuration = TimeSpan.FromMinutes(30);
-                            NewExerciseDistance = 5.0;
+                            NewExerciseDuration = TimeSpan.FromMinutes(30); NewExerciseDistance = 5.0;
                             break;
                         case ExerciseType.Time:
                             NewExerciseDuration = TimeSpan.FromMinutes(15);
                             break;
                         case ExerciseType.Running:
-                            NewExerciseDuration = TimeSpan.FromMinutes(30);
-                            NewExerciseDistance = 5.0;
+                            NewExerciseDuration = TimeSpan.FromMinutes(30); NewExerciseDistance = 5.0;
                             InitializeNewRunningSets();
                             break;
                         case ExerciseType.Sprinting:
-                            NewExerciseDistance = 100;
-                            NewSprintSeconds = 12;
-                            NewSprintHundredths = 50;
+                            NewExerciseDistance = 100; NewSprintSeconds = 12; NewSprintHundredths = 50;
                             InitializeNewSprintSets();
                             break;
                         case ExerciseType.SledSprint:
-                            NewExerciseDistance = 20;
-                            NewExerciseWeight = 20;
-                            NewExerciseUnit = "kg";
-                            NewSprintSeconds = 8;
-                            NewSprintHundredths = 0;
+                            NewExerciseDistance = 20; NewExerciseWeight = 20; NewExerciseUnit = "kg"; NewSprintSeconds = 8; NewSprintHundredths = 0;
                             InitializeNewSledSprintSets();
                             break;
                     }
@@ -962,7 +700,7 @@ namespace SprintTrack.ViewModels
                 ShowExerciseDropdown = false;
             }
         }
-        
+
         private void AddCustomExercise() { }
         private void OnExerciseEntryFocused() { ShowExerciseDropdown = true; FilterCommonExercises(); }
         private void OnExerciseEntryUnfocused() { ShowExerciseDropdown = false; }
@@ -972,11 +710,11 @@ namespace SprintTrack.ViewModels
         private void DecreaseReps(ExerciseSet? exerciseSet) { if (exerciseSet != null && exerciseSet.Reps > 1) exerciseSet.Reps--; }
         private void IncreaseWeight(ExerciseSet? exerciseSet) { if (exerciseSet != null) exerciseSet.Weight += 1.25; }
         private void DecreaseWeight(ExerciseSet? exerciseSet) { if (exerciseSet != null && exerciseSet.Weight > 0) exerciseSet.Weight = Math.Max(0, exerciseSet.Weight - 1.25); }
-        private void AddSet(Exercise? exercise) 
+        private void AddSet(Exercise? exercise)
         {
             if (exercise != null && exercise.ExerciseType == ExerciseType.Strength)
             {
-                var nextSetNumber = exercise.ExerciseSets.Where(s => !s.IsWarmupSet).Count() + 1;
+                var nextSetNumber = exercise.ExerciseSets.Count(s => !s.IsWarmupSet) + 1;
                 var newSet = new ExerciseSet
                 {
                     SetNumber = nextSetNumber,
@@ -988,32 +726,26 @@ namespace SprintTrack.ViewModels
                 exercise.ExerciseSets.Add(newSet);
             }
         }
-        
-        private void RemoveSet(ExerciseSet? exerciseSet) 
+
+        private void RemoveSet(ExerciseSet? exerciseSet)
         {
             if (exerciseSet != null)
             {
-                // Find the exercise containing this set
                 var exercise = TrainingSession.Exercises.FirstOrDefault(e => e.ExerciseSets.Contains(exerciseSet));
                 if (exercise != null && exercise.ExerciseSets.Count > 1)
                 {
                     exercise.ExerciseSets.Remove(exerciseSet);
-                    
-                    // Renumber the remaining sets properly
                     RenumberExerciseSets(exercise);
                 }
             }
         }
-        
-        private void IncreaseDuration(Exercise? exercise) 
+
+        private void IncreaseDuration(Exercise? exercise)
         {
-            if (exercise != null)
-            {
-                exercise.Duration = exercise.Duration.Add(TimeSpan.FromMinutes(5));
-            }
+            if (exercise != null) exercise.Duration = exercise.Duration.Add(TimeSpan.FromMinutes(5));
         }
-        
-        private void DecreaseDuration(Exercise? exercise) 
+
+        private void DecreaseDuration(Exercise? exercise)
         {
             if (exercise != null && exercise.Duration > TimeSpan.Zero)
             {
@@ -1021,22 +753,22 @@ namespace SprintTrack.ViewModels
                 exercise.Duration = newDuration > TimeSpan.Zero ? newDuration : TimeSpan.Zero;
             }
         }
-        
-        private void IncreaseDistance(Exercise? exercise) 
+
+        private void IncreaseDistance(Exercise? exercise)
         {
             if (exercise != null)
             {
-                var increment = exercise.ExerciseType == ExerciseType.SledSprint ? 5 : 
+                var increment = exercise.ExerciseType == ExerciseType.SledSprint ? 5 :
                                exercise.ExerciseType == ExerciseType.Sprinting ? 100 : 1;
                 exercise.Distance += increment;
             }
         }
-        
-        private void DecreaseDistance(Exercise? exercise) 
+
+        private void DecreaseDistance(Exercise? exercise)
         {
             if (exercise != null && exercise.Distance > 0)
             {
-                var decrement = exercise.ExerciseType == ExerciseType.SledSprint ? 5 : 
+                var decrement = exercise.ExerciseType == ExerciseType.SledSprint ? 5 :
                                exercise.ExerciseType == ExerciseType.Sprinting ? 100 : 1;
                 exercise.Distance = Math.Max(0, exercise.Distance - decrement);
             }
@@ -1046,44 +778,26 @@ namespace SprintTrack.ViewModels
         {
             if (exerciseSet != null)
             {
-                // Find the exercise containing this set
                 var exercise = TrainingSession.Exercises.FirstOrDefault(e => e.ExerciseSets.Contains(exerciseSet));
                 if (exercise != null)
                 {
                     if (exerciseSet.IsWarmupSet)
                     {
-                        // If clicking on a warmup set, toggle it back to normal
                         exerciseSet.IsWarmupSet = false;
-                        
-                        // Also convert all sets after this one back to normal if they were warmup
                         var allSets = exercise.ExerciseSets.OrderBy(s => s.SetNumber).ToList();
                         var clickedIndex = allSets.IndexOf(exerciseSet);
-                        
                         for (int i = clickedIndex + 1; i < allSets.Count; i++)
                         {
-                            if (allSets[i].IsWarmupSet)
-                            {
-                                allSets[i].IsWarmupSet = false;
-                            }
-                            else
-                            {
-                                break; // Stop when we hit the first non-warmup set
-                            }
+                            if (allSets[i].IsWarmupSet) allSets[i].IsWarmupSet = false;
+                            else break;
                         }
                     }
                     else
                     {
-                        // If clicking on a normal set, make it and all previous sets warmup
                         var allSets = exercise.ExerciseSets.OrderBy(s => s.SetNumber).ToList();
                         var clickedIndex = allSets.IndexOf(exerciseSet);
-            
-                        // Make all sets up to and including the clicked set into warmup sets
-                        for (int i = 0; i <= clickedIndex; i++)
-                        {
-                            allSets[i].IsWarmupSet = true;
-                        }
+                        for (int i = 0; i <= clickedIndex; i++) { allSets[i].IsWarmupSet = true; }
                     }
-                    
                     RenumberExerciseSets(exercise);
                 }
             }
@@ -1093,44 +807,26 @@ namespace SprintTrack.ViewModels
         {
             if (runningSet != null)
             {
-                // Find the exercise containing this set
                 var exercise = TrainingSession.Exercises.FirstOrDefault(e => e.RunningSets.Contains(runningSet));
                 if (exercise != null)
                 {
                     if (runningSet.IsWarmupSet)
                     {
-                        // If clicking on a warmup set, toggle it back to normal
                         runningSet.IsWarmupSet = false;
-                        
-                        // Also convert all sets after this one back to normal if they were warmup
                         var allSets = exercise.RunningSets.OrderBy(s => s.SetNumber).ToList();
                         var clickedIndex = allSets.IndexOf(runningSet);
-                        
                         for (int i = clickedIndex + 1; i < allSets.Count; i++)
                         {
-                            if (allSets[i].IsWarmupSet)
-                            {
-                                allSets[i].IsWarmupSet = false;
-                            }
-                            else
-                            {
-                                break; // Stop when we hit the first non-warmup set
-                            }
+                            if (allSets[i].IsWarmupSet) allSets[i].IsWarmupSet = false;
+                            else break;
                         }
                     }
                     else
                     {
-                        // If clicking on a normal set, make it and all previous sets warmup
                         var allSets = exercise.RunningSets.OrderBy(s => s.SetNumber).ToList();
                         var clickedIndex = allSets.IndexOf(runningSet);
-                        
-                        // Make all sets up to and including the clicked set into warmup sets
-                        for (int i = 0; i <= clickedIndex; i++)
-                        {
-                            allSets[i].IsWarmupSet = true;
-                        }
+                        for (int i = 0; i <= clickedIndex; i++) { allSets[i].IsWarmupSet = true; }
                     }
-                    
                     RenumberRunningSets(exercise);
                 }
             }
@@ -1138,38 +834,18 @@ namespace SprintTrack.ViewModels
 
         private void RenumberExerciseSets(Exercise exercise)
         {
-            // Get all non-warmup sets and renumber them
             var nonWarmupSets = exercise.ExerciseSets.Where(s => !s.IsWarmupSet).OrderBy(s => s.SetNumber).ToList();
-            for (int i = 0; i < nonWarmupSets.Count; i++)
-            {
-                nonWarmupSets[i].SetNumber = i + 1;
-            }
-            
-            // Warmup sets keep their original position but don't affect numbering
+            for (int i = 0; i < nonWarmupSets.Count; i++) { nonWarmupSets[i].SetNumber = i + 1; }
             var warmupSets = exercise.ExerciseSets.Where(s => s.IsWarmupSet).ToList();
-            foreach (var warmupSet in warmupSets)
-            {
-                // Warmup sets don't have a meaningful set number
-                warmupSet.SetNumber = 0;
-            }
+            foreach (var warmupSet in warmupSets) { warmupSet.SetNumber = 0; }
         }
 
         private void RenumberRunningSets(Exercise exercise)
         {
-            // Get all non-warmup sets and renumber them
             var nonWarmupSets = exercise.RunningSets.Where(s => !s.IsWarmupSet).OrderBy(s => s.SetNumber).ToList();
-            for (int i = 0; i < nonWarmupSets.Count; i++)
-            {
-                nonWarmupSets[i].SetNumber = i + 1;
-            }
-            
-            // Warmup sets keep their original position but don't affect numbering
+            for (int i = 0; i < nonWarmupSets.Count; i++) { nonWarmupSets[i].SetNumber = i + 1; }
             var warmupSets = exercise.RunningSets.Where(s => s.IsWarmupSet).ToList();
-            foreach (var warmupSet in warmupSets)
-            {
-                // Warmup sets don't have a meaningful set number
-                warmupSet.SetNumber = 0;
-            }
+            foreach (var warmupSet in warmupSets) { warmupSet.SetNumber = 0; }
         }
 
         private void ToggleNewWarmupSet(ExerciseSet? exerciseSet)
@@ -1178,38 +854,21 @@ namespace SprintTrack.ViewModels
             {
                 if (exerciseSet.IsWarmupSet)
                 {
-                    // If clicking on a warmup set, toggle it back to normal
                     exerciseSet.IsWarmupSet = false;
-                    
-                    // Also convert all sets after this one back to normal if they were warmup
                     var allSets = _newExerciseSetsList.OrderBy(s => s.SetNumber).ToList();
                     var clickedIndex = allSets.IndexOf(exerciseSet);
-                    
                     for (int i = clickedIndex + 1; i < allSets.Count; i++)
                     {
-                        if (allSets[i].IsWarmupSet)
-                        {
-                            allSets[i].IsWarmupSet = false;
-                        }
-                        else
-                        {
-                            break; // Stop when we hit the first non-warmup set
-                        }
+                        if (allSets[i].IsWarmupSet) allSets[i].IsWarmupSet = false;
+                        else break;
                     }
                 }
                 else
                 {
-                    // If clicking on a normal set, make it and all previous sets warmup
                     var allSets = _newExerciseSetsList.OrderBy(s => s.SetNumber).ToList();
                     var clickedIndex = allSets.IndexOf(exerciseSet);
-                    
-                    // Make all sets up to and including the clicked set into warmup sets
-                    for (int i = 0; i <= clickedIndex; i++)
-                    {
-                        allSets[i].IsWarmupSet = true;
-                    }
+                    for (int i = 0; i <= clickedIndex; i++) { allSets[i].IsWarmupSet = true; }
                 }
-                
                 RenumberNewExerciseSets();
             }
         }
@@ -1220,79 +879,49 @@ namespace SprintTrack.ViewModels
             {
                 if (runningSet.IsWarmupSet)
                 {
-                    // If clicking on a warmup set, toggle it back to normal
                     runningSet.IsWarmupSet = false;
-                    
-                    // Also convert all sets after this one back to normal if they were warmup
                     var allSets = _newRunningSetsList.OrderBy(s => s.SetNumber).ToList();
                     var clickedIndex = allSets.IndexOf(runningSet);
-                    
                     for (int i = clickedIndex + 1; i < allSets.Count; i++)
                     {
-                        if (allSets[i].IsWarmupSet)
-                        {
-                            allSets[i].IsWarmupSet = false;
-                        }
-                        else
-                        {
-                            break; // Stop when we hit the first non-warmup set
-                        }
+                        if (allSets[i].IsWarmupSet) allSets[i].IsWarmupSet = false;
+                        else break;
                     }
                 }
                 else
                 {
-                    // If clicking on a normal set, make it and all previous sets warmup
                     var allSets = _newRunningSetsList.OrderBy(s => s.SetNumber).ToList();
                     var clickedIndex = allSets.IndexOf(runningSet);
-                    
-                    // Make all sets up to and including the clicked set into warmup sets
-                    for (int i = 0; i <= clickedIndex; i++)
-                    {
-                        allSets[i].IsWarmupSet = true;
-                    }
+                    for (int i = 0; i <= clickedIndex; i++) { allSets[i].IsWarmupSet = true; }
                 }
-                
                 RenumberNewRunningSets();
             }
         }
 
         private void RenumberNewExerciseSets()
         {
-            // Get all non-warmup sets and renumber them
             var nonWarmupSets = _newExerciseSetsList.Where(s => !s.IsWarmupSet).OrderBy(s => s.SetNumber).ToList();
-            for (int i = 0; i < nonWarmupSets.Count; i++)
-            {
-                nonWarmupSets[i].SetNumber = i + 1;
-            }
-            
-            // Warmup sets keep their original position but don't affect numbering
+            for (int i = 0; i < nonWarmupSets.Count; i++) { nonWarmupSets[i].SetNumber = i + 1; }
             var warmupSets = _newExerciseSetsList.Where(s => s.IsWarmupSet).ToList();
-            foreach (var warmupSet in warmupSets)
-            {
-                // Warmup sets don't have a meaningful set number
-                warmupSet.SetNumber = 0;
-            }
+            foreach (var warmupSet in warmupSets) { warmupSet.SetNumber = 0; }
         }
 
         private void RenumberNewRunningSets()
         {
-            // Get all non-warmup sets and renumber them
             var nonWarmupSets = _newRunningSetsList.Where(s => !s.IsWarmupSet).OrderBy(s => s.SetNumber).ToList();
             for (int i = 0; i < nonWarmupSets.Count; i++)
             {
                 nonWarmupSets[i].SetNumber = i + 1;
             }
-            
-            // Warmup sets keep their original position but don't affect numbering
             var warmupSets = _newRunningSetsList.Where(s => s.IsWarmupSet).ToList();
             foreach (var warmupSet in warmupSets)
             {
-                // Warmup sets don't have a meaningful set number
                 warmupSet.SetNumber = 0;
             }
         }
     }
 
+    // Helper class for common exercises
     public class CommonExercise
     {
         public CommonExercise(string name, ExerciseType type, string description)
