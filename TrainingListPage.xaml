@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SprintTrack.TrainingListPage"
+             Title="All Training Sessions">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header with Search and Add Button -->
+        <Grid Grid.Row="0" Padding="20,20,20,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <SearchBar Grid.Column="0"
+                       Placeholder="Search training sessions..."
+                       Text="{Binding SearchText}"
+                       SearchCommand="{Binding SearchCommand}"
+                       Margin="0,0,10,0" />
+
+            <Button Grid.Column="1"
+                    Text="+ Add"
+                    Command="{Binding AddSessionCommand}"
+                    BackgroundColor="Green"
+                    TextColor="White"
+                    FontSize="14"
+                    Padding="15,8" />
+        </Grid>
+
+        <!-- Training Count Info -->
+        <StackLayout Grid.Row="1" 
+                     Padding="20,0,20,10" 
+                     Orientation="Horizontal">
+            <Label Text="{Binding FilteredTrainingsCount, StringFormat='Showing {0}'}" 
+                   FontSize="14" 
+                   TextColor="Gray" />
+            <Label Text="{Binding TotalTrainingsCount, StringFormat='of {0} training sessions'}" 
+                   FontSize="14" 
+                   TextColor="Gray"
+                   IsVisible="{Binding SearchText, Converter={StaticResource StringToBoolConverter}}" />
+        </StackLayout>
+
+        <!-- Training Sessions List -->
+        <CollectionView Grid.Row="2" 
+                        ItemsSource="{Binding FilteredTrainingSessions}"
+                        Margin="20,0"
+                        x:Name="TrainingSessionsCollectionView">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="0,5">
+                        <Frame BackgroundColor="White" 
+                               BorderColor="LightGray"
+                               Padding="15"
+                               HasShadow="True"
+                               Margin="0,5">
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Main content area - clickable -->
+                                <Grid Grid.Column="0">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={x:Reference TrainingSessionsCollectionView}, Path=BindingContext.ViewSessionCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                    
+                                    <StackLayout Spacing="5" BackgroundColor="Transparent">
+                                        <StackLayout.GestureRecognizers>
+                                            <!-- Backup gesture recognizer for the entire stack layout -->
+                                            <TapGestureRecognizer Command="{Binding Source={x:Reference TrainingSessionsCollectionView}, Path=BindingContext.ViewSessionCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </StackLayout.GestureRecognizers>
+                                        
+                                        <!-- Date and Title Row -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <Label Grid.Column="0"
+                                                   Text="{Binding Date, StringFormat='{0:yyyy-MM-dd}'}" 
+                                                   FontSize="14" 
+                                                   FontAttributes="Bold"
+                                                   TextColor="Blue" 
+                                                   VerticalOptions="Center">
+                                                <Label.GestureRecognizers>
+                                                    <!-- Another backup gesture recognizer -->
+                                                    <TapGestureRecognizer Command="{Binding Source={x:Reference TrainingSessionsCollectionView}, Path=BindingContext.ViewSessionCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Label.GestureRecognizers>
+                                            </Label>
+                                            
+                                            <Label Grid.Column="1"
+                                                   Text="{Binding DisplayName}" 
+                                                   FontAttributes="Bold" 
+                                                   FontSize="16"
+                                                   Margin="10,0,10,0"
+                                                   VerticalOptions="Center">
+                                                <Label.GestureRecognizers>
+                                                    <!-- Another backup gesture recognizer -->
+                                                    <TapGestureRecognizer Command="{Binding Source={x:Reference TrainingSessionsCollectionView}, Path=BindingContext.ViewSessionCommand}"
+                                                                          CommandParameter="{Binding .}" />
+                                                </Label.GestureRecognizers>
+                                            </Label>
+                                            
+                                            <!-- Backup View button -->
+                                            <Button Grid.Column="2"
+                                                    Text="View"
+                                                    Command="{Binding Source={x:Reference TrainingSessionsCollectionView}, Path=BindingContext.ViewSessionCommand}"
+                                                    CommandParameter="{Binding .}"
+                                                    BackgroundColor="LightBlue"
+                                                    TextColor="White"
+                                                    FontSize="10"
+                                                    Padding="8,4"
+                                                    VerticalOptions="Center" />
+                                        </Grid>
+                                        
+                                        <!-- Training Type -->
+                                        <Label Text="{Binding Type}" 
+                                               FontSize="14" 
+                                               TextColor="DarkGray" 
+                                               IsVisible="{Binding Type, Converter={StaticResource StringToBoolConverter}}" />
+                                        
+                                        <!-- Description -->
+                                        <Label Text="{Binding Description}" 
+                                               FontSize="12" 
+                                               TextColor="Gray"
+                                               IsVisible="{Binding Description, Converter={StaticResource StringToBoolConverter}}" />
+                                        
+                                        <!-- Duration and Intensity Row -->
+                                        <StackLayout Orientation="Horizontal" Spacing="15">
+                                            <Label Text="{Binding DurationDisplay}" 
+                                                   FontSize="12" 
+                                                   TextColor="Blue" />
+                                            <Label Text="{Binding Intensity, StringFormat='Intensity: {0}/10'}" 
+                                                   FontSize="12" 
+                                                   TextColor="Orange" />
+                                            <Label Text="{Binding ExerciseCount, StringFormat='{0} exercises'}" 
+                                                   FontSize="12" 
+                                                   TextColor="Green" 
+                                                   IsVisible="{Binding HasExercises}" />
+                                        </StackLayout>
+                                        
+                                        <!-- Visual indication that item is clickable -->
+                                        <Label Text="?? Tap anywhere to view details" 
+                                               FontSize="10" 
+                                               TextColor="LightGray" 
+                                               FontAttributes="Italic"
+                                               HorizontalOptions="Start" />
+                                    </StackLayout>
+                                </Grid>
+
+                                <!-- Delete button - separate from clickable area -->
+                                <Button Grid.Column="1" 
+                                        Text="Delete"
+                                        Command="{Binding Source={x:Reference TrainingSessionsCollectionView}, Path=BindingContext.DeleteSessionCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="Red"
+                                        TextColor="White"
+                                        FontSize="12"
+                                        VerticalOptions="Start"
+                                        Margin="10,0,0,0" />
+                            </Grid>
+                        </Frame>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            
+            <CollectionView.EmptyView>
+                <StackLayout HorizontalOptions="Center" 
+                             VerticalOptions="Center"
+                             Spacing="10">
+                    <Label Text="??" 
+                           FontSize="48" 
+                           HorizontalTextAlignment="Center" 
+                           TextColor="LightGray" />
+                    <Label Text="No training sessions found" 
+                           FontSize="16" 
+                           TextColor="Gray" 
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="Add your first training session!" 
+                           FontSize="14" 
+                           TextColor="LightGray" 
+                           HorizontalTextAlignment="Center"
+                           IsVisible="{Binding TotalTrainingsCount, Converter={StaticResource CountToBoolConverter}, ConverterParameter='Invert'}" />
+                </StackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+
+        <!-- Add Session Overlay -->
+        <Frame Grid.Row="0"
+               Grid.RowSpan="3"
+               IsVisible="{Binding IsAddingSession}"
+               BackgroundColor="White"
+               BorderColor="Gray"
+               Padding="20"
+               Margin="20"
+               VerticalOptions="Center"
+               HorizontalOptions="FillAndExpand">
+            
+            <StackLayout Spacing="15">
+                <Label Text="Add Training Session" 
+                       FontSize="18" 
+                       FontAttributes="Bold" 
+                       HorizontalTextAlignment="Center" />
+                
+                <Label Text="Use the calendar view to add training sessions with all options" 
+                       FontSize="14" 
+                       TextColor="Gray" 
+                       HorizontalTextAlignment="Center" />
+                
+                <Button Text="Close"
+                        Command="{Binding CancelAddSessionCommand}"
+                        BackgroundColor="Gray"
+                        TextColor="White" />
+            </StackLayout>
+        </Frame>
+    </Grid>
+
+</ContentPage>
