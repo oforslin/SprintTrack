@@ -393,4 +393,21 @@ namespace SprintTrack.Converters
             }
         }
     }
+
+    public class InvertedCountToBoolConverter : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (value is int count)
+            {
+                return count == 0; // Return true when count is 0 (no exercises)
+            }
+            return true; // Default to showing the "no exercises" message
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

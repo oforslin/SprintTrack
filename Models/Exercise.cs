@@ -29,8 +29,11 @@ namespace SprintTrack.Models
             get => _id;
             set
             {
-                _id = value;
-                OnPropertyChanged();
+                if (_id != value)
+                {
+                    _id = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -39,8 +42,11 @@ namespace SprintTrack.Models
             get => _name;
             set
             {
-                _name = value;
-                OnPropertyChanged();
+                if (_name != value)
+                {
+                    _name = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -49,8 +55,11 @@ namespace SprintTrack.Models
             get => _description;
             set
             {
-                _description = value;
-                OnPropertyChanged();
+                if (_description != value)
+                {
+                    _description = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -59,9 +68,13 @@ namespace SprintTrack.Models
             get => _sets;
             set
             {
-                _sets = Math.Max(1, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(1, value);
+                if (_sets != newValue)
+                {
+                    _sets = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -70,9 +83,13 @@ namespace SprintTrack.Models
             get => _reps;
             set
             {
-                _reps = Math.Max(1, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(1, value);
+                if (_reps != newValue)
+                {
+                    _reps = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -81,9 +98,13 @@ namespace SprintTrack.Models
             get => _weight;
             set
             {
-                _weight = Math.Max(0, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(0, value);
+                if (Math.Abs(_weight - newValue) > 0.001) // Use epsilon for double comparison
+                {
+                    _weight = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -92,9 +113,16 @@ namespace SprintTrack.Models
             get => _duration;
             set
             {
-                _duration = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                if (_duration != value)
+                {
+                    _duration = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                    OnPropertyChanged(nameof(DurationDisplay));
+                    OnPropertyChanged(nameof(DurationHours));
+                    OnPropertyChanged(nameof(DurationMinutes));
+                    OnPropertyChanged(nameof(DurationSeconds));
+                }
             }
         }
 
@@ -103,9 +131,13 @@ namespace SprintTrack.Models
             get => _distance;
             set
             {
-                _distance = Math.Max(0, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(0, value);
+                if (Math.Abs(_distance - newValue) > 0.001) // Use epsilon for double comparison
+                {
+                    _distance = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -114,14 +146,17 @@ namespace SprintTrack.Models
             get => _unit;
             set
             {
-                _unit = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                
-                // Update all exercise sets with new unit
-                foreach (var exerciseSet in ExerciseSets)
+                if (_unit != value)
                 {
-                    exerciseSet.Unit = value;
+                    _unit = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                    
+                    // Update all exercise sets with new unit
+                    foreach (var exerciseSet in ExerciseSets)
+                    {
+                        exerciseSet.Unit = value;
+                    }
                 }
             }
         }
@@ -131,9 +166,12 @@ namespace SprintTrack.Models
             get => _exerciseType;
             set
             {
-                _exerciseType = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                if (_exerciseType != value)
+                {
+                    _exerciseType = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -142,8 +180,11 @@ namespace SprintTrack.Models
             get => _exerciseSets;
             set
             {
-                _exerciseSets = value;
-                OnPropertyChanged();
+                if (_exerciseSets != value)
+                {
+                    _exerciseSets = value ?? new ObservableCollection<ExerciseSet>();
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -152,8 +193,11 @@ namespace SprintTrack.Models
             get => _runningSets;
             set
             {
-                _runningSets = value;
-                OnPropertyChanged();
+                if (_runningSets != value)
+                {
+                    _runningSets = value ?? new ObservableCollection<RunningSet>();
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -163,10 +207,12 @@ namespace SprintTrack.Models
             get => Duration.Hours;
             set
             {
-                var newDuration = new TimeSpan(Math.Max(0, value), Duration.Minutes, Duration.Seconds);
-                Duration = newDuration;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DurationDisplay));
+                var newValue = Math.Max(0, value);
+                var newDuration = new TimeSpan(newValue, Duration.Minutes, Duration.Seconds);
+                if (Duration != newDuration)
+                {
+                    Duration = newDuration;
+                }
             }
         }
 
@@ -175,10 +221,12 @@ namespace SprintTrack.Models
             get => Duration.Minutes;
             set
             {
-                var newDuration = new TimeSpan(Duration.Hours, Math.Max(0, Math.Min(59, value)), Duration.Seconds);
-                Duration = newDuration;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DurationDisplay));
+                var newValue = Math.Max(0, Math.Min(59, value));
+                var newDuration = new TimeSpan(Duration.Hours, newValue, Duration.Seconds);
+                if (Duration != newDuration)
+                {
+                    Duration = newDuration;
+                }
             }
         }
 
@@ -187,10 +235,12 @@ namespace SprintTrack.Models
             get => Duration.Seconds;
             set
             {
-                var newDuration = new TimeSpan(Duration.Hours, Duration.Minutes, Math.Max(0, Math.Min(59, value)));
-                Duration = newDuration;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DurationDisplay));
+                var newValue = Math.Max(0, Math.Min(59, value));
+                var newDuration = new TimeSpan(Duration.Hours, Duration.Minutes, newValue);
+                if (Duration != newDuration)
+                {
+                    Duration = newDuration;
+                }
             }
         }
 
@@ -201,10 +251,14 @@ namespace SprintTrack.Models
             get => _sprintSeconds;
             set
             {
-                _sprintSeconds = Math.Max(0, Math.Min(59, value));
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SprintTimeDisplay));
+                var newValue = Math.Max(0, Math.Min(59, value));
+                if (_sprintSeconds != newValue)
+                {
+                    _sprintSeconds = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                    OnPropertyChanged(nameof(SprintTimeDisplay));
+                }
             }
         }
 
@@ -213,10 +267,14 @@ namespace SprintTrack.Models
             get => _sprintHundredths;
             set
             {
-                _sprintHundredths = Math.Max(0, Math.Min(99, value));
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SprintTimeDisplay));
+                var newValue = Math.Max(0, Math.Min(99, value));
+                if (_sprintHundredths != newValue)
+                {
+                    _sprintHundredths = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                    OnPropertyChanged(nameof(SprintTimeDisplay));
+                }
             }
         }
 
@@ -272,10 +330,17 @@ namespace SprintTrack.Models
             get => _setNumber;
             set
             {
-                _setNumber = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SetDisplayText));
+                if (_setNumber != value)
+                {
+                    _setNumber = value;
+                    // Force UI update by triggering property change notifications
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        OnPropertyChanged();
+                        OnPropertyChanged(nameof(DisplayText));
+                        OnPropertyChanged(nameof(SetDisplayText));
+                    });
+                }
             }
         }
 
@@ -284,9 +349,16 @@ namespace SprintTrack.Models
             get => _duration;
             set
             {
-                _duration = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                if (_duration != value)
+                {
+                    _duration = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                    OnPropertyChanged(nameof(DurationDisplay));
+                    OnPropertyChanged(nameof(DurationHours));
+                    OnPropertyChanged(nameof(DurationMinutes));
+                    OnPropertyChanged(nameof(DurationSeconds));
+                }
             }
         }
 
@@ -295,9 +367,13 @@ namespace SprintTrack.Models
             get => _distance;
             set
             {
-                _distance = Math.Max(0, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(0, value);
+                if (Math.Abs(_distance - newValue) > 0.001) // Use epsilon for double comparison
+                {
+                    _distance = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -306,9 +382,13 @@ namespace SprintTrack.Models
             get => _weight;
             set
             {
-                _weight = Math.Max(0, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(0, value);
+                if (Math.Abs(_weight - newValue) > 0.001) // Use epsilon for double comparison
+                {
+                    _weight = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -317,10 +397,14 @@ namespace SprintTrack.Models
             get => _sprintSeconds;
             set
             {
-                _sprintSeconds = Math.Max(0, Math.Min(59, value));
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SprintTimeDisplay));
+                var newValue = Math.Max(0, Math.Min(59, value));
+                if (_sprintSeconds != newValue)
+                {
+                    _sprintSeconds = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                    OnPropertyChanged(nameof(SprintTimeDisplay));
+                }
             }
         }
 
@@ -329,10 +413,14 @@ namespace SprintTrack.Models
             get => _sprintHundredths;
             set
             {
-                _sprintHundredths = Math.Max(0, Math.Min(99, value));
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SprintTimeDisplay));
+                var newValue = Math.Max(0, Math.Min(99, value));
+                if (_sprintHundredths != newValue)
+                {
+                    _sprintHundredths = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                    OnPropertyChanged(nameof(SprintTimeDisplay));
+                }
             }
         }
 
@@ -341,10 +429,17 @@ namespace SprintTrack.Models
             get => _isWarmupSet;
             set
             {
-                _isWarmupSet = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SetDisplayText));
+                if (_isWarmupSet != value)
+                {
+                    _isWarmupSet = value;
+                    // Force UI update by triggering property change notifications
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        OnPropertyChanged();
+                        OnPropertyChanged(nameof(DisplayText));
+                        OnPropertyChanged(nameof(SetDisplayText));
+                    });
+                }
             }
         }
 
@@ -354,10 +449,12 @@ namespace SprintTrack.Models
             get => Duration.Hours;
             set
             {
-                var newDuration = new TimeSpan(Math.Max(0, value), Duration.Minutes, Duration.Seconds);
-                Duration = newDuration;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DurationDisplay));
+                var newValue = Math.Max(0, value);
+                var newDuration = new TimeSpan(newValue, Duration.Minutes, Duration.Seconds);
+                if (Duration != newDuration)
+                {
+                    Duration = newDuration;
+                }
             }
         }
 
@@ -366,10 +463,12 @@ namespace SprintTrack.Models
             get => Duration.Minutes;
             set
             {
-                var newDuration = new TimeSpan(Duration.Hours, Math.Max(0, Math.Min(59, value)), Duration.Seconds);
-                Duration = newDuration;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DurationDisplay));
+                var newValue = Math.Max(0, Math.Min(59, value));
+                var newDuration = new TimeSpan(Duration.Hours, newValue, Duration.Seconds);
+                if (Duration != newDuration)
+                {
+                    Duration = newDuration;
+                }
             }
         }
 
@@ -378,10 +477,12 @@ namespace SprintTrack.Models
             get => Duration.Seconds;
             set
             {
-                var newDuration = new TimeSpan(Duration.Hours, Duration.Minutes, Math.Max(0, Math.Min(59, value)));
-                Duration = newDuration;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DurationDisplay));
+                var newValue = Math.Max(0, Math.Min(59, value));
+                var newDuration = new TimeSpan(Duration.Hours, Duration.Minutes, newValue);
+                if (Duration != newDuration)
+                {
+                    Duration = newDuration;
+                }
             }
         }
 
@@ -432,10 +533,17 @@ namespace SprintTrack.Models
             get => _setNumber;
             set
             {
-                _setNumber = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SetDisplayText));
+                if (_setNumber != value)
+                {
+                    _setNumber = value;
+                    // Force UI update by triggering property change notifications
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        OnPropertyChanged();
+                        OnPropertyChanged(nameof(DisplayText));
+                        OnPropertyChanged(nameof(SetDisplayText));
+                    });
+                }
             }
         }
 
@@ -444,9 +552,13 @@ namespace SprintTrack.Models
             get => _reps;
             set
             {
-                _reps = Math.Max(1, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(1, value);
+                if (_reps != newValue)
+                {
+                    _reps = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -455,9 +567,13 @@ namespace SprintTrack.Models
             get => _weight;
             set
             {
-                _weight = Math.Max(0, value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                var newValue = Math.Max(0, value);
+                if (Math.Abs(_weight - newValue) > 0.001) // Use epsilon for double comparison
+                {
+                    _weight = newValue;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -466,9 +582,12 @@ namespace SprintTrack.Models
             get => _unit;
             set
             {
-                _unit = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
+                if (_unit != value)
+                {
+                    _unit = value ?? "kg";
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayText));
+                }
             }
         }
 
@@ -477,10 +596,17 @@ namespace SprintTrack.Models
             get => _isWarmupSet;
             set
             {
-                _isWarmupSet = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(DisplayText));
-                OnPropertyChanged(nameof(SetDisplayText));
+                if (_isWarmupSet != value)
+                {
+                    _isWarmupSet = value;
+                    // Force UI update by triggering property change notifications
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        OnPropertyChanged();
+                        OnPropertyChanged(nameof(DisplayText));
+                        OnPropertyChanged(nameof(SetDisplayText));
+                    });
+                }
             }
         }
 

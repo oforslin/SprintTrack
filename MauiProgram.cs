@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using SprintTrack.ViewModels;
 using SprintTrack.Services;
+using Sharpnado.CollectionView;
 
 namespace SprintTrack
 {
@@ -11,6 +12,7 @@ namespace SprintTrack
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseSharpnadoCollectionView(loggerEnable: false)
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
